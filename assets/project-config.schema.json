@@ -1,0 +1,163 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://antigravity.internal/schemas/it-department-config.schema.json",
+  "title": "ITDepartmentProjectConfig",
+  "description": "Configuration schema for target projects governed by the IT Department skill.",
+  "type": "object",
+  "required": [
+    "project_name",
+    "schema_version",
+    "cto_mode",
+    "delegated_authorities",
+    "git_policy",
+    "quality_gates",
+    "paths",
+    "security"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "description": "Optional URI or relative path to this schema definition."
+    },
+    "project_name": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Name of the target project."
+    },
+    "schema_version": {
+      "type": "string",
+      "enum": ["2.0.0"],
+      "description": "Version of the configuration contract."
+    },
+    "cto_mode": {
+      "type": "string",
+      "enum": ["VIRTUAL", "USER"],
+      "description": "Decision and communication mode for the CTO persona."
+    },
+    "cto_mode_options": {
+      "type": "object",
+      "description": "Descriptions of CTO operational modes.",
+      "additionalProperties": {
+        "type": "string"
+      }
+    },
+    "delegated_authorities": {
+      "type": "object",
+      "required": [
+        "allow_merge_integration",
+        "allow_merge_production",
+        "allow_deploy_production",
+        "allow_infra_provisioning",
+        "allow_destructive_operations",
+        "allow_schema_migrations",
+        "allow_dependency_updates"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "allow_merge_integration": { "type": "boolean" },
+        "allow_merge_production": { "type": "boolean" },
+        "allow_deploy_production": { "type": "boolean" },
+        "allow_infra_provisioning": { "type": "boolean" },
+        "allow_destructive_operations": { "type": "boolean" },
+        "allow_schema_migrations": { "type": "boolean" },
+        "allow_dependency_updates": { "type": "boolean" }
+      }
+    },
+    "git_policy": {
+      "type": "object",
+      "required": [
+        "production_branch",
+        "integration_branch",
+        "branch_naming_patterns",
+        "worktrees_enabled"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "production_branch": {
+          "type": "string",
+          "minLength": 1
+        },
+        "integration_branch": {
+          "type": "string",
+          "minLength": 1
+        },
+        "branch_naming_patterns": {
+          "type": "object",
+          "required": ["feature", "bug", "hotfix"],
+          "additionalProperties": false,
+          "properties": {
+            "feature": { "type": "string", "minLength": 1 },
+            "bug": { "type": "string", "minLength": 1 },
+            "hotfix": { "type": "string", "minLength": 1 }
+          }
+        },
+        "worktrees_enabled": { "type": "boolean" }
+      }
+    },
+    "quality_gates": {
+      "type": "object",
+      "required": [
+        "test_coverage_threshold_percent",
+        "require_peer_code_review",
+        "require_qa_signoff",
+        "blocking_defect_severities"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "test_coverage_threshold_percent": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "require_peer_code_review": { "type": "boolean" },
+        "require_qa_signoff": { "type": "boolean" },
+        "blocking_defect_severities": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "enum": ["Critical", "Major", "Minor", "Trivial"]
+          }
+        }
+      }
+    },
+    "paths": {
+      "type": "object",
+      "required": [
+        "vault_relative_path",
+        "sessions_relative_path",
+        "worktrees_relative_path"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "vault_relative_path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "sessions_relative_path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "worktrees_relative_path": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "security": {
+      "type": "object",
+      "required": [
+        "production_secrets_agent_access",
+        "test_secrets_agent_managed",
+        "commit_real_credentials"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "production_secrets_agent_access": { "type": "boolean" },
+        "test_secrets_agent_managed": { "type": "boolean" },
+        "commit_real_credentials": { "type": "boolean" }
+      }
+    }
+  }
+}

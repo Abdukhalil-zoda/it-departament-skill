@@ -1,0 +1,48 @@
+{
+  "$schema": "./project-config.schema.json",
+  "project_name": "Project Workspace",
+  "schema_version": "2.0.0",
+  "cto_mode": "VIRTUAL",
+  "cto_mode_options": {
+    "VIRTUAL": "Virtual CTO acts as technical interface and delivery coordinator; shields user from technical trivia.",
+    "USER": "User acts as CTO; coordinator presents concrete technical proposals, ADRs, and release candidates for direct user decision."
+  },
+  "delegated_authorities": {
+    "allow_merge_integration": true,
+    "allow_merge_production": false,
+    "allow_deploy_production": false,
+    "allow_infra_provisioning": false,
+    "allow_destructive_operations": false,
+    "allow_schema_migrations": true,
+    "allow_dependency_updates": true
+  },
+  "git_policy": {
+    "production_branch": "main",
+    "integration_branch": "development",
+    "branch_naming_patterns": {
+      "feature": "feature/{task-id}/{dd.mm.yyyy}/{agent}",
+      "bug": "bug/{bug-id}/{dd.mm.yyyy}/{agent}",
+      "hotfix": "hotfix/{task-id}/{dd.mm.yyyy}/{agent}"
+    },
+    "worktrees_enabled": true
+  },
+  "quality_gates": {
+    "test_coverage_threshold_percent": 80,
+    "require_peer_code_review": true,
+    "require_qa_signoff": true,
+    "blocking_defect_severities": [
+      "Critical",
+      "Major"
+    ]
+  },
+  "paths": {
+    "vault_relative_path": "vault",
+    "sessions_relative_path": ".it-department/sessions",
+    "worktrees_relative_path": ".it-department/worktrees"
+  },
+  "security": {
+    "production_secrets_agent_access": false,
+    "test_secrets_agent_managed": true,
+    "commit_real_credentials": false
+  }
+}
