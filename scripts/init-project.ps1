@@ -182,6 +182,11 @@ $ledgerRelPath = if ($hasEfficiency -and -not [string]::IsNullOrWhiteSpace($conf
 $resolvedLedgerDir = Assert-ValidRelativePath $ledgerRelPath "efficiency.ledger_path" $canonicalProjectRoot $canonicalSkillRoot
 $resolvedUsageDir = Split-Path -Parent $resolvedLedgerDir
 
+# Content review: locales used to fill the glossary / style guide placeholders of the vault template
+$crCfg = if ($configObj.PSObject.Properties['content_review']) { $configObj.content_review } else { $null }
+$contentSourceLocale = if ($crCfg -and -not [string]::IsNullOrWhiteSpace([string]$crCfg.source_locale)) { [string]$crCfg.source_locale } else { "en" }
+$contentLocales = if ($crCfg -and $crCfg.locales) { (@($crCfg.locales) -join ", ") } else { $contentSourceLocale }
+
 # --- 4. Mutate Filesystem Safely & Idempotently ---
 Write-Host "==> Initializing IT Department for Project: $($configObj.project_name)"
 Write-Host "    Project Root: $canonicalProjectRoot"
@@ -252,6 +257,10 @@ foreach ($item in $templateItems) {
                 $dashContent = $dashContent -replace '\{LAST_UPDATED\}', $currentDate
                 $dashContent = $dashContent -replace '\{CTO_MODE\}', $effectiveCtoMode
                 Set-Content -LiteralPath $targetItemPath -Value $dashContent -Encoding UTF8
+            } elseif ($relativePath -like "06-Content*") {
+                $contentDoc = Get-Content -Raw -LiteralPath $item.FullName -Encoding UTF8
+                $contentDoc = $contentDoc.Replace('{SOURCE_LOCALE}', $contentSourceLocale).Replace('{LOCALES}', $contentLocales).Replace('{DATE}', (Get-Date).ToString("yyyy-MM-dd"))
+                Set-Content -LiteralPath $targetItemPath -Value $contentDoc -Encoding UTF8
             } else {
                 Copy-Item -LiteralPath $item.FullName -Destination $targetItemPath -Force
             }

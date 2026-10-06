@@ -39,7 +39,8 @@ Configuration is resolved from `<project_root>/.it-department/config.json`.
     *   Require an immutable release candidate commit SHA on the integration branch.
     *   Verify the complete production diff (`git diff <production>...<candidate-sha>`).
     *   Confirm all acceptance criteria passed and zero open `Critical` or `Major` defects exist.
-    *   Review and sign off on any non-blocking `Minor` defect deferrals.
+    *   Require the pre-release content review verdict for the same candidate SHA (`approved` or `approved-with-deferrals`, report in `<vault>/05-Reports/`); a `blocked` verdict stops the release like a functional blocker ([`content-reviewer.md`](./content-reviewer.md)).
+    *   Review and sign off on any non-blocking `Minor` defect deferrals, including content deferrals listed in the content review report; decide disputed wording and glossary terms (the CTO owns product wording).
 5.  **Secrets & Security Enforcement:** Ensure production credentials remain 100% human-managed. Reject any commit or PR that exposes real credentials in code or repos.
 
 ---

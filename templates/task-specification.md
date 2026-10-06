@@ -12,6 +12,8 @@ date_created: "{YYYY-MM-DD}"
 date_updated: "{YYYY-MM-DD}"
 pr_link: ""
 qa_status: pending # pending | testing | passed | failed
+content_review: required # required (task adds or changes any user-facing text, localized resource or shipped content) | not-applicable
+content_review_intake: pending # pending | approved | changes-requested | not-applicable  (set by the coordinator from the Content Reviewer's verdict)
 cto_approved: false
 tags:
   - task
@@ -54,14 +56,28 @@ List the exact source code files, classes, interfaces, and methods that the deve
 - `{Project.Infrastructure}/Persistence/{Context}.cs`: Update ORM mapping.
 - `{Project.Application}/Validators/{Validator}.cs`: Add validation rule.
 
-## 6. Acceptance Criteria
+## 6. User-Facing Content & Localization
+*(State "Not applicable." and set `content_review: not-applicable` only when the task adds or changes no text a user can see. Otherwise every string the task introduces or changes is listed here, in every configured locale, and the Content Reviewer finalizes it before `Ready-For-Dev`. Developers copy the approved text verbatim; they do not write user-facing text themselves. Guide: `workflows/content-review.md`.)*
+- **Locales:** {from `config.json` → `content_review.locales`, source locale first}
+- **Glossary / style guide:** `{vault}/06-Content/glossary.md`, `{vault}/06-Content/style-guide.md`
+- **Strings:**
+
+| Key / Location | Context (screen, when shown) | {source locale} | {locale 2} | Limits & notes (max length, plural forms, placeholders) |
+| :--- | :--- | :--- | :--- | :--- |
+| `{Resource}.{Key}` (`{file}`) | {screen / state} | {text} | {text} | {≤ 24 chars; `{count}` kept} |
+
+- **Shipped content touched (seeded / imported / generated):** {data set or file, locale rules that apply, or None}
+- **Content review (intake):** verdict `{pending}` — note: `{sessions}/{TASK-ID}/content-reviewer/{session-id}/content-review-intake.md`
+
+## 7. Acceptance Criteria
 Concrete, measurable rules that QA will use to pass or fail this task:
 1. Feature behaves as expected under valid inputs.
 2. Invalid inputs return HTTP 400 with standard error payload.
 3. Edge cases (nulls, boundary values, empty arrays) handled gracefully without unhandled exceptions.
 4. Unit and integration tests cover newly introduced logic, meeting or exceeding the project's configured threshold (`quality_gates.test_coverage_threshold_percent`).
+5. Every user-facing string of §6 exists in every configured locale with the approved text; `scripts/content_inventory.py` reports no missing, empty, placeholder or wrong-script findings for the task's keys. *(Omit when §6 is "Not applicable.")*
 
-## 7. JSON Contracts
+## 8. JSON Contracts
 *(For non-API tasks, state: "Not applicable.")*
 
 ### {METHOD} {EndpointPath}
@@ -95,6 +111,6 @@ Header: `{Header-Name}: {Header-Value}`
 }
 ```
 
-## 8. Dependencies & Blockers
+## 9. Dependencies & Blockers
 - Depends on: [[{ANOTHER-TASK-ID}]] (or None)
 - Blocks: [[{FUTURE-TASK-ID}]] (or None)

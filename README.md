@@ -13,7 +13,8 @@ The entry point for the host is [`SKILL.md`](./SKILL.md). This file is the human
 | Area | Highlights |
 | :--- | :--- |
 | **Deep reasoning, not blind execution** | Feasibility scoring (1–10), constructive pushback with alternatives, "Ask Why" context discovery, and the Stubborn Donkey Override gate with an `ADR-OVERRIDE` record. |
-| **Roles** | `agents/*.md` — one system prompt per role with step-by-step SOPs and session-output contracts. |
+| **Roles** | `agents/*.md` — one system prompt per role (CTO, System Analyst, Architect, Backend / Frontend developers, QA, DevOps, Content & Localization Reviewer) with step-by-step SOPs and session-output contracts. |
+| **Content & localization review** | Two checkpoints: every user-facing string finalized in every locale before development, and all texts of the release candidate reviewed before the CTO gate, with an inventory script, glossary, style guide and a report to the CTO. |
 | **Delivery pipeline** | Ready-For-Dev → worktree → tests (≥ 80 % coverage) → CI → peer review → integration merge → QA on an immutable candidate SHA → CTO release gate → production → archive. |
 | **Safety rails** | Delegated authorities in `config.json`, mock vs real secrets rules, non-destructive rollback (redeploy, never force-push), incident triage classes. |
 | **Vault** | Project-local Obsidian vault (`vault/`) with kanban folders, bugs, ADRs, usage-audit reports and a zero-deletion archive. |
@@ -24,24 +25,26 @@ The entry point for the host is [`SKILL.md`](./SKILL.md). This file is the human
 ```text
 SKILL.md                      host entry point: routing, modes, guarantees
 README.md                     this overview
-agents/                       role prompts (cto, system-analyst, architect, backend-dev, frontend-dev, qa-engineer, devops-engineer)
+agents/                       role prompts (cto, system-analyst, architect, backend-dev, frontend-dev, qa-engineer,
+                              devops-engineer, content-reviewer)
 workflows/                    runbooks: orchestration & worktrees, git branching, review/QA/release, CTO authority,
                               deep reasoning & override, lightweight vs full routes, secrets & incidents,
-                              efficiency & usage audit (token optimizer)
-templates/                    task specification, bug/defect, ADR, usage-audit prompt
+                              efficiency & usage audit (token optimizer), content review (two checkpoints)
+templates/                    task specification, bug/defect, ADR, usage-audit prompt, content-review report
 references/                   canonical contracts & lifecycle, MCP integration, worked example (SHOP-102)
 assets/                       config-template.json, project-config.schema.json, vault-template/
 scripts/                      init-project.{ps1,sh}, validate-project.{ps1,sh},
-                              usage_ledger.py, usage_report.py, schedule-usage-audit.{ps1,sh}
+                              usage_ledger.py, usage_report.py, schedule-usage-audit.{ps1,sh}, content_inventory.py
 ```
 
 The package is stateless. All project data lives in the target project:
 
 ```text
 <project_root>/
-├── vault/                    00-Dashboard.md, 01-Tasks/<status>/, 02-Bugs/, 03-ADR/, 04-Archive/, 05-Reports/
+├── vault/                    00-Dashboard.md, 01-Tasks/<status>/, 02-Bugs/, 03-ADR/, 04-Archive/, 05-Reports/,
+│                             06-Content/ (glossary, style guide)
 └── .it-department/
-    ├── config.json           modes, delegated authorities, git policy, quality gates, paths, efficiency rules
+    ├── config.json           modes, delegated authorities, git policy, quality gates, paths, efficiency rules, content review
     ├── sessions/             <task-id>/<role>/<session-id>/ work records; _usage/ledger/ usage ledger
     ├── worktrees/            isolated git worktrees per task
     └── jobs/                 optional machine-time feed (job logs or jobs.jsonl)
@@ -100,6 +103,29 @@ tails. The optimizer makes that visible and keeps it down.
     scripts (`schedule-usage-audit.ps1` / `.sh`: `-DryRun`, `-RunNow`, `-Register`) that run `claude -p` headless.
 
 Full guide: [`workflows/efficiency-and-usage-audit.md`](./workflows/efficiency-and-usage-audit.md).
+
+## Content & localization review (two checkpoints)
+
+Tests pass with an untranslated button and screenshots look fine with a mistranslated label, so text gets
+its own reviewer (`agents/content-reviewer.md`) who works twice per change and reports to the CTO:
+
+*   **Checkpoint A — task creation.** Every task that adds or changes user-facing text carries a strings table
+    (template §6) in every configured locale; the reviewer finalizes the wording before `Ready-For-Dev`
+    and developers copy it verbatim into the project's resources.
+*   **Checkpoint B — pre-release.** On the frozen candidate SHA the reviewer runs
+    ```bash
+    python3 <skill_root>/scripts/content_inventory.py --root <project_root> --base <production-sha>
+    ```
+    (missing, empty, untranslated and malformed strings; placeholder and writing-system mismatches;
+    strings changed since the last release; hardcoded markup text; wrong-language content data), reads the
+    changed texts in every locale, logs content defects as bugs, writes
+    `vault/05-Reports/content-review-<date>-<sha7>.md` and sends the CTO a ≤ 15-line verdict.
+    `Critical`/`Major` content defects block the release; `Minor` ones need the CTO's signed deferral.
+*   **Reference files.** `vault/06-Content/glossary.md` and `style-guide.md`, created by `init-project`,
+    owned by the reviewer; terms change only by CTO decision. Configuration in the `content_review` block of
+    `config.json` (locales, resource globs, inline code tables, content data sources).
+
+Full guide: [`workflows/content-review.md`](./workflows/content-review.md).
 
 ## Where to read next
 

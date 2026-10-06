@@ -101,6 +101,8 @@ PROJECT_NAME_EFFECTIVE="$PROJECT_NAME_INPUT"
 CTO_MODE_EFFECTIVE="VIRTUAL"
 LEDGER_REL_PATH=".it-department/sessions/_usage/ledger"
 HAS_EFFICIENCY="yes"
+CONTENT_SOURCE_LOCALE="en"
+CONTENT_LOCALES="en"
 
 if [ -f "$PROJECT_CONFIG_PATH" ]; then
     echo "    Loading existing .it-department/config.json..."
@@ -118,6 +120,9 @@ print(cfg.get("cto_mode", "VIRTUAL"))
 e = cfg.get("efficiency") or {}
 print(e.get("ledger_path") or ".it-department/sessions/_usage/ledger")
 print("yes" if cfg.get("efficiency") else "no")
+c = cfg.get("content_review") or {}
+print(c.get("source_locale") or "en")
+print(", ".join(str(x) for x in (c.get("locales") or [c.get("source_locale") or "en"])))
 ' "$PROJECT_CONFIG_PATH")
     elif [ "$JSON_ENGINE" = "node" ]; then
         READ_VALUES=$(node -e '
@@ -132,6 +137,9 @@ console.log(cfg.cto_mode || "VIRTUAL");
 const e = cfg.efficiency || {};
 console.log(e.ledger_path || ".it-department/sessions/_usage/ledger");
 console.log(cfg.efficiency ? "yes" : "no");
+const c = cfg.content_review || {};
+console.log(c.source_locale || "en");
+console.log((Array.isArray(c.locales) && c.locales.length ? c.locales : [c.source_locale || "en"]).join(", "));
 ' "$PROJECT_CONFIG_PATH")
     elif [ "$JSON_ENGINE" = "jq" ]; then
         VAULT_REL_PATH=$(jq -r '.paths.vault_relative_path // "vault"' "$PROJECT_CONFIG_PATH")
@@ -141,10 +149,12 @@ console.log(cfg.efficiency ? "yes" : "no");
         CTO_MODE_EFFECTIVE=$(jq -r '.cto_mode // "VIRTUAL"' "$PROJECT_CONFIG_PATH")
         LEDGER_REL_PATH=$(jq -r '.efficiency.ledger_path // ".it-department/sessions/_usage/ledger"' "$PROJECT_CONFIG_PATH")
         HAS_EFFICIENCY=$(jq -r 'if .efficiency then "yes" else "no" end' "$PROJECT_CONFIG_PATH")
+        CONTENT_SOURCE_LOCALE=$(jq -r '.content_review.source_locale // "en"' "$PROJECT_CONFIG_PATH")
+        CONTENT_LOCALES=$(jq -r '(.content_review.locales // [(.content_review.source_locale // "en")]) | join(", ")' "$PROJECT_CONFIG_PATH")
     fi
 
     if [ "$JSON_ENGINE" != "jq" ]; then
-        IFS=$'\n' read -r -d '' VAULT_REL_PATH SESSIONS_REL_PATH WORKTREES_REL_PATH PROJECT_NAME_EFFECTIVE CTO_MODE_EFFECTIVE LEDGER_REL_PATH HAS_EFFICIENCY <<< "$READ_VALUES" || true
+        IFS=$'\n' read -r -d '' VAULT_REL_PATH SESSIONS_REL_PATH WORKTREES_REL_PATH PROJECT_NAME_EFFECTIVE CTO_MODE_EFFECTIVE LEDGER_REL_PATH HAS_EFFICIENCY CONTENT_SOURCE_LOCALE CONTENT_LOCALES <<< "$READ_VALUES" || true
     fi
 fi
 
@@ -247,6 +257,12 @@ find "$VAULT_TEMPLATE_DIR" -type f | while read -r src_file; do
             sed -e "s/{PROJECT_NAME}/$PROJECT_NAME_EFFECTIVE/g" \
                 -e "s/{LAST_UPDATED}/$CURRENT_DATE/g" \
                 -e "s/{CTO_MODE}/$CTO_MODE_EFFECTIVE/g" \
+                "$src_file" > "$target_file"
+        elif [ "${rel_file#/06-Content/}" != "$rel_file" ]; then
+            CURRENT_DATE=$(date +%Y-%m-%d)
+            sed -e "s/{SOURCE_LOCALE}/$CONTENT_SOURCE_LOCALE/g" \
+                -e "s/{LOCALES}/$CONTENT_LOCALES/g" \
+                -e "s/{DATE}/$CURRENT_DATE/g" \
                 "$src_file" > "$target_file"
         else
             cp "$src_file" "$target_file"

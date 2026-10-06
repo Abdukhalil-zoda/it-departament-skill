@@ -69,5 +69,53 @@
     "ledger_path": ".it-department/sessions/_usage/ledger",
     "jobs_log_path": ".it-department/jobs",
     "reports_path": "vault/05-Reports"
+  },
+  "content_review": {
+    "enabled": true,
+    "source_locale": "en",
+    "locales": [
+      "en"
+    ],
+    "locale_scripts": {},
+    "checkpoints": [
+      "task-creation",
+      "pre-release"
+    ],
+    "block_release_on": [
+      "Critical",
+      "Major"
+    ],
+    "glossary_path": "vault/06-Content/glossary.md",
+    "style_guide_path": "vault/06-Content/style-guide.md",
+    "reports_path": "vault/05-Reports",
+    "text_sources": [
+      "**/*.resx",
+      "**/i18n/**/*.json",
+      "**/locales/**/*.json",
+      "**/res/values*/strings.xml",
+      "**/*.lproj/*.strings"
+    ],
+    "inline_tables": [],
+    "markup_sources": [
+      "**/*.xaml",
+      "**/*.razor",
+      "**/*.cshtml",
+      "**/*.html",
+      "**/*.vue",
+      "**/*.tsx",
+      "**/*.jsx"
+    ],
+    "content_data_sources": [],
+    "exclude": [
+      "**/bin/**",
+      "**/obj/**",
+      "**/node_modules/**",
+      "**/dist/**",
+      "**/build/**",
+      "**/.git/**",
+      "**/.it-department/**",
+      "**/vault/**",
+      "**/*.Designer.cs"
+    ]
   }
 }
