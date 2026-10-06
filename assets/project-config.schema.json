@@ -158,6 +158,71 @@
         "test_secrets_agent_managed": { "type": "boolean" },
         "commit_real_credentials": { "type": "boolean" }
       }
+    },
+    "efficiency": {
+      "type": "object",
+      "description": "Token optimizer: efficiency rules R1-R5, usage ledger and the scheduled usage audit (workflows/efficiency-and-usage-audit.md). Optional for projects created before schema 2.0.0 gained it.",
+      "additionalProperties": false,
+      "properties": {
+        "audit_interval_days": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 30,
+          "description": "How often the usage audit runs; keep the scheduled task in sync."
+        },
+        "audit_model": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Model id or alias of the strongest available model that runs the audit."
+        },
+        "report_language": {
+          "type": "string",
+          "minLength": 2,
+          "description": "Language of the audit report and the CTO message, as a language name the auditing model understands (e.g. \"English\", \"Russian\")."
+        },
+        "rules": {
+          "type": "object",
+          "description": "Numeric limits enforced in task briefs and measured by the audit. Keys are prefixed with the rule id (R1-R5).",
+          "additionalProperties": { "type": "number" },
+          "properties": {
+            "R1_builds_per_fix_round_max": { "type": "number", "minimum": 1 },
+            "R2_screenshots_per_scenario_max": { "type": "number", "minimum": 1 },
+            "R2_screenshot_scale": { "type": "number", "exclusiveMinimum": 0, "maximum": 1 },
+            "R3_full_suite_runs_per_candidate_max": { "type": "number", "minimum": 1 },
+            "R4_summary_lines_max": { "type": "number", "minimum": 1 },
+            "R4_log_tail_lines": { "type": "number", "minimum": 1 },
+            "R4_tool_result_tokens_max": { "type": "number", "minimum": 100 },
+            "R5_queue_wait_minutes_max": { "type": "number", "minimum": 0 },
+            "R5_split_jobs_longer_than_minutes": { "type": "number", "minimum": 1 }
+          }
+        },
+        "token_weights": {
+          "type": "object",
+          "description": "Effective cost weights used by usage_ledger.py (input=1 by convention).",
+          "additionalProperties": false,
+          "properties": {
+            "input": { "type": "number", "minimum": 0 },
+            "cache_write": { "type": "number", "minimum": 0 },
+            "cache_read": { "type": "number", "minimum": 0 },
+            "output": { "type": "number", "minimum": 0 }
+          }
+        },
+        "ledger_path": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Project-relative directory of the usage ledger JSON files (aggregates only, versioned)."
+        },
+        "jobs_log_path": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Project-relative directory of build/test/device job logs or jobs.jsonl (machine-time feed, optional)."
+        },
+        "reports_path": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Project-relative directory of the usage audit reports (inside the vault by default)."
+        }
+      }
     }
   }
 }

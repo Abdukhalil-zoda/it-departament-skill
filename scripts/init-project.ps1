@@ -172,6 +172,16 @@ $resolvedVaultDir = Assert-ValidRelativePath $vaultRelPath "paths.vault_relative
 $resolvedSessionsDir = Assert-ValidRelativePath $sessionsRelPath "paths.sessions_relative_path" $canonicalProjectRoot $canonicalSkillRoot
 $resolvedWorktreesDir = Assert-ValidRelativePath $worktreesRelPath "paths.worktrees_relative_path" $canonicalProjectRoot $canonicalSkillRoot
 
+# Token optimizer: usage ledger directory (efficiency.ledger_path, default under the sessions directory)
+$hasEfficiency = [bool]($configObj.PSObject.Properties['efficiency'] -and $configObj.efficiency)
+$ledgerRelPath = if ($hasEfficiency -and -not [string]::IsNullOrWhiteSpace($configObj.efficiency.ledger_path)) {
+    [string]$configObj.efficiency.ledger_path
+} else {
+    ".it-department/sessions/_usage/ledger"
+}
+$resolvedLedgerDir = Assert-ValidRelativePath $ledgerRelPath "efficiency.ledger_path" $canonicalProjectRoot $canonicalSkillRoot
+$resolvedUsageDir = Split-Path -Parent $resolvedLedgerDir
+
 # --- 4. Mutate Filesystem Safely & Idempotently ---
 Write-Host "==> Initializing IT Department for Project: $($configObj.project_name)"
 Write-Host "    Project Root: $canonicalProjectRoot"
@@ -185,6 +195,19 @@ if (-not (Test-Path -LiteralPath $resolvedSessionsDir)) {
 }
 if (-not (Test-Path -LiteralPath $resolvedWorktreesDir)) {
     $null = New-Item -ItemType Directory -Force -Path $resolvedWorktreesDir
+}
+if (-not (Test-Path -LiteralPath $resolvedLedgerDir)) {
+    $null = New-Item -ItemType Directory -Force -Path $resolvedLedgerDir
+}
+$usageGitignore = Join-Path $resolvedUsageDir ".gitignore"
+if (-not (Test-Path -LiteralPath $usageGitignore)) {
+    $gitignoreLines = @(
+        "# IT Department usage ledger: keep ledger/*.json (aggregates only); ignore raw transcript copies and audit runs",
+        "raw/",
+        "audit-runs/",
+        "audit-prompt.generated.md"
+    )
+    Set-Content -LiteralPath $usageGitignore -Value ($gitignoreLines -join "`n") -Encoding UTF8
 }
 
 # Copy schema definition into project runtime dir if absent
@@ -240,3 +263,7 @@ Write-Host "==> Initialization completed successfully."
 Write-Host "    Vault:     $resolvedVaultDir"
 Write-Host "    Sessions:  $resolvedSessionsDir"
 Write-Host "    Worktrees: $resolvedWorktreesDir"
+Write-Host "    Ledger:    $resolvedLedgerDir"
+if (-not $hasEfficiency) {
+    Write-Host "    [HINT] config.json has no 'efficiency' block: the token optimizer uses default limits and paths. Copy the block from '$configTemplatePath' to tune rules R1-R5 and the audit interval."
+}

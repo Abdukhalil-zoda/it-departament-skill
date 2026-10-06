@@ -49,3 +49,11 @@ Every task authored must use [`templates/task-specification.md`](../templates/ta
 
 ## 4. Session Artifacts
 All analytical notes and interview logs must be stored in `<project_root>/.it-department/sessions/<task-id>/system-analyst/<session-id>/`.
+
+---
+
+## 5. Efficiency Rules (R4 - see [`workflows/efficiency-and-usage-audit.md`](../workflows/efficiency-and-usage-audit.md))
+*   **R4 Log discipline:** inspect repositories with targeted searches instead of whole-file dumps; return findings as summaries of at most `R4_summary_lines_max` (10) lines plus file references; nothing above `R4_tool_result_tokens_max` (2 000) tokens is pasted into the coordinator session.
+*   **Budget in the task:** every specification states the efficiency budget the task inherits (R1 build rounds, R2 screenshot budget for UI tasks, R3 re-verification scope) so developers and QA do not rediscover it.
+*   **Usage ledger:** before finishing export the session usage:
+    `python3 <skill_root>/scripts/usage_ledger.py --root <project_root> --role system-analyst --task {task-id}` (`python` on Windows).

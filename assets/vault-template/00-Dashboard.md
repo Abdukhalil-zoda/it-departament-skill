@@ -39,6 +39,14 @@
 
 ---
 
+## 📈 Usage Audits (`vault/05-Reports/`, rules R1–R5: `workflows/efficiency-and-usage-audit.md`)
+
+| Date | Report | Window | Highlights | CTO Decisions |
+| :--- | :--- | :--- | :--- | :--- |
+| *(No usage audit yet — the first one becomes the baseline)* | | | | |
+
+---
+
 ## 📦 Recent Production Releases (`vault/04-Archive/Completed-Tasks/`)
 
 | Release Tag | Commit SHA | Date | Tasks Included | Verified By |
