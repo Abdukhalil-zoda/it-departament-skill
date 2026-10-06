@@ -173,6 +173,50 @@ if (!p || typeof p !== "object") {
     }
 }
 
+// Efficiency section (token optimizer) - optional, strictly validated when present
+const eff = cfg.efficiency;
+if (eff === undefined || eff === null) {
+    console.log("    [WARN] Config has no efficiency section: usage audit limits and paths fall back to defaults (copy the block from assets/config-template.json).");
+} else if (typeof eff !== "object" || Array.isArray(eff)) {
+    errors.push("efficiency must be an object.");
+} else {
+    const aid = eff.audit_interval_days;
+    if (aid !== undefined && (!Number.isInteger(aid) || aid < 1 || aid > 30)) {
+        errors.push("efficiency.audit_interval_days must be an integer between 1 and 30, got: " + aid);
+    }
+    if (eff.audit_model !== undefined && (typeof eff.audit_model !== "string" || !eff.audit_model.trim())) {
+        errors.push("efficiency.audit_model must be a non-empty string.");
+    }
+    if (eff.rules !== undefined) {
+        if (typeof eff.rules !== "object" || Array.isArray(eff.rules) || eff.rules === null) {
+            errors.push("efficiency.rules must be an object.");
+        } else {
+            for (const [rk, rv] of Object.entries(eff.rules)) {
+                if (typeof rv !== "number" || Number.isNaN(rv)) errors.push("efficiency.rules." + rk + " must be a number, got: " + typeof rv);
+            }
+        }
+    }
+    for (const k of ["ledger_path", "jobs_log_path", "reports_path"]) {
+        const val = eff[k];
+        if (val === undefined) continue;
+        if (!val || typeof val !== "string") {
+            errors.push("efficiency." + k + " must be a non-empty string");
+        } else if (path.isAbsolute(val)) {
+            errors.push("efficiency." + k + " must be relative, got: " + val);
+        } else {
+            const resolved = path.resolve(projectRoot, val);
+            const rel = path.relative(projectRoot, resolved);
+            if (rel.startsWith("..") || rel === "") {
+                errors.push("efficiency." + k + " (" + val + ") resolves outside project_root: " + resolved);
+            }
+            const relSkill = path.relative(skillRoot, resolved);
+            if (!relSkill.startsWith("..")) {
+                errors.push("efficiency." + k + " (" + val + ") resolves inside skill_root: " + resolved);
+            }
+        }
+    }
+}
+
 if (errors.length > 0) {
     console.error(errors.join("\n"));
     process.exit(1);
@@ -191,14 +235,16 @@ with open(config_path, "r", encoding="utf-8") as f:
 
 errors = []
 
-if cfg.get("schema_version") != "2.0.0":
-    errors.append(f"Invalid schema_version: {cfg.get(\"schema_version\")}. Expected 2.0.0")
+schema_version = cfg.get("schema_version")
+if schema_version != "2.0.0":
+    errors.append(f"Invalid schema_version: {schema_version}. Expected 2.0.0")
 
 if not cfg.get("project_name") or not isinstance(cfg.get("project_name"), str):
     errors.append("Missing or invalid project_name.")
 
-if cfg.get("cto_mode") not in ["VIRTUAL", "USER"]:
-    errors.append(f"Invalid cto_mode: {cfg.get(\"cto_mode\")}. Allowed: VIRTUAL, USER.")
+cto_mode = cfg.get("cto_mode")
+if cto_mode not in ["VIRTUAL", "USER"]:
+    errors.append(f"Invalid cto_mode: {cto_mode}. Allowed: VIRTUAL, USER.")
 
 auth = cfg.get("delegated_authorities")
 if not isinstance(auth, dict):
@@ -262,6 +308,42 @@ else:
             if not rel_skill.startswith(".."):
                 errors.append(f"paths.{pkey} ({pval}) resolves inside skill_root: {resolved}")
 
+# Efficiency section (token optimizer) - optional, strictly validated when present
+eff = cfg.get("efficiency")
+if eff is None:
+    print("    [WARN] Config has no efficiency section: usage audit limits and paths fall back to defaults (copy the block from assets/config-template.json).")
+elif not isinstance(eff, dict):
+    errors.append("efficiency must be an object.")
+else:
+    aid = eff.get("audit_interval_days")
+    if aid is not None and (not isinstance(aid, int) or isinstance(aid, bool) or aid < 1 or aid > 30):
+        errors.append(f"efficiency.audit_interval_days must be an integer between 1 and 30, got: {aid}")
+    if "audit_model" in eff and (not isinstance(eff.get("audit_model"), str) or not eff.get("audit_model").strip()):
+        errors.append("efficiency.audit_model must be a non-empty string.")
+    if "rules" in eff:
+        if not isinstance(eff.get("rules"), dict):
+            errors.append("efficiency.rules must be an object.")
+        else:
+            for rk, rv in eff["rules"].items():
+                if isinstance(rv, bool) or not isinstance(rv, (int, float)):
+                    errors.append(f"efficiency.rules.{rk} must be a number, got: {type(rv).__name__}")
+    for pkey in ["ledger_path", "jobs_log_path", "reports_path"]:
+        if pkey not in eff:
+            continue
+        pval = eff.get(pkey)
+        if not pval or not isinstance(pval, str):
+            errors.append(f"efficiency.{pkey} must be a non-empty string.")
+        elif os.path.isabs(pval):
+            errors.append(f"efficiency.{pkey} must be relative, got: {pval}")
+        else:
+            resolved = os.path.realpath(os.path.join(project_root, pval))
+            rel = os.path.relpath(resolved, project_root)
+            if rel.startswith("..") or rel == ".":
+                errors.append(f"efficiency.{pkey} ({pval}) resolves outside project_root: {resolved}")
+            rel_skill = os.path.relpath(resolved, skill_root)
+            if not rel_skill.startswith(".."):
+                errors.append(f"efficiency.{pkey} ({pval}) resolves inside skill_root: {resolved}")
+
 if errors:
     print("\n".join(errors), file=sys.stderr)
     sys.exit(1)
@@ -303,9 +385,9 @@ for subdir in \
     "01-Tasks/Backlog" "01-Tasks/In-Analysis" "01-Tasks/Ready-For-Dev" \
     "01-Tasks/In-Development" "01-Tasks/Code-Review" "01-Tasks/QA-Testing" \
     "01-Tasks/Ready-For-Release" "02-Bugs" "03-ADR" \
-    "04-Archive/Completed-Tasks" "04-Archive/Resolved-Bugs" "04-Archive/Deprecated-Proposals"; do
+    "04-Archive/Completed-Tasks" "04-Archive/Resolved-Bugs" "04-Archive/Deprecated-Proposals" "05-Reports"; do
     if [ ! -d "$RESOLVED_VAULT/$subdir" ]; then
-        echo "Error: Missing vault subdirectory: $RESOLVED_VAULT/$subdir" >&2
+        echo "Error: Missing vault subdirectory: $RESOLVED_VAULT/$subdir (re-run init-project to add folders introduced by newer skill versions)" >&2
         exit 1
     fi
 done

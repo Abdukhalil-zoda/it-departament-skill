@@ -209,6 +209,44 @@ if (-not (Test-Path -LiteralPath $configPath)) {
             }
         }
 
+        # Efficiency section (token optimizer) - optional, strictly validated when present
+        if (-not ($configObj.PSObject.Properties['efficiency'] -and $configObj.efficiency)) {
+            Write-Host "    [WARN] Config has no 'efficiency' section: usage audit limits and paths fall back to defaults (copy the block from assets/config-template.json)."
+        } else {
+            $eff = $configObj.efficiency
+            $aid = $eff.audit_interval_days
+            if ($null -ne $aid -and (($aid -isnot [int] -and $aid -isnot [long]) -or $aid -lt 1 -or $aid -gt 30)) {
+                $failures += "Field 'efficiency.audit_interval_days' must be an integer between 1 and 30, got: '$aid'."
+            }
+            if ($null -ne $eff.audit_model -and [string]::IsNullOrWhiteSpace([string]$eff.audit_model)) {
+                $failures += "Field 'efficiency.audit_model' must be a non-empty string."
+            }
+            if ($null -ne $eff.rules) {
+                foreach ($rule in $eff.rules.PSObject.Properties) {
+                    if ($null -eq ($rule.Value -as [double])) {
+                        $failures += "Field 'efficiency.rules.$($rule.Name)' must be a number, got: '$($rule.Value)'."
+                    }
+                }
+            }
+            foreach ($rp in @("ledger_path", "jobs_log_path", "reports_path")) {
+                $val = $eff.$rp
+                if ($null -eq $val) { continue }
+                if ([string]::IsNullOrWhiteSpace($val)) {
+                    $failures += "Field 'efficiency.$rp' must not be empty."
+                } elseif ([System.IO.Path]::IsPathRooted($val)) {
+                    $failures += "Field 'efficiency.$rp' must be relative, got absolute: '$val'."
+                } else {
+                    $resolved = [System.IO.Path]::GetFullPath([System.IO.Path]::Combine($canonicalProjectRoot, $val))
+                    if (-not (Test-IsStrictInside $resolved $canonicalProjectRoot)) {
+                        $failures += "Field 'efficiency.$rp' ('$val') traverses outside project root: '$resolved'."
+                    }
+                    if (Test-IsSameOrInside $resolved $canonicalSkillRoot) {
+                        $failures += "Field 'efficiency.$rp' ('$val') resolves inside skill root: '$resolved'."
+                    }
+                }
+            }
+        }
+
         if ($failures.Count -eq 0) {
             Write-Host "    [PASS] .it-department/config.json is valid and strictly conforms to contract."
         }
@@ -236,13 +274,14 @@ if ($configObj -and $configObj.paths) {
         "03-ADR",
         "04-Archive/Completed-Tasks",
         "04-Archive/Resolved-Bugs",
-        "04-Archive/Deprecated-Proposals"
+        "04-Archive/Deprecated-Proposals",
+        "05-Reports"
     )
 
     foreach ($sub in $requiredVaultSubdirs) {
         $targetSub = Join-Path $resolvedVaultDir $sub
         if (-not (Test-Path -LiteralPath $targetSub)) {
-            $failures += "Missing required vault directory at resolved path: $targetSub"
+            $failures += "Missing required vault directory at resolved path: $targetSub (re-run init-project to add folders introduced by newer skill versions)"
         }
     }
 

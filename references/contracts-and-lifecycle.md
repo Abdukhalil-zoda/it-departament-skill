@@ -86,6 +86,9 @@ All path resolution is relative to `<project_root>`:
 2.  **Vault Root:** `<project_root>/${paths.vault_relative_path}` (default `vault`).
 3.  **Sessions Directory:** `<project_root>/${paths.sessions_relative_path}` (default `.it-department/sessions`).
 4.  **Worktrees Directory:** `<project_root>/${paths.worktrees_relative_path}` (default `.it-department/worktrees`).
+5.  **Usage Ledger:** `<project_root>/${efficiency.ledger_path}` (default `.it-department/sessions/_usage/ledger`), aggregates only, versioned; `_usage/raw/` and `_usage/audit-runs/` are git-ignored.
+6.  **Machine-Time Feed (optional):** `<project_root>/${efficiency.jobs_log_path}` (default `.it-department/jobs`): job logs or `jobs.jsonl`.
+7.  **Usage Audit Reports:** `<project_root>/${efficiency.reports_path}` (default `vault/05-Reports`): `usage-audit-<date>.md` + `.json` sidecar.
 
 ### Multi-Repo & Worktree Isolation Formula
 To support both single-repository workspaces and multi-repository mono-workspaces without naming collisions:
@@ -114,7 +117,7 @@ To eliminate race conditions, file corruption, and duplicate task claims:
     *   The **Coordinator** is the exclusive writer of shared task notes, note moves between folders, and `<vault>/00-Dashboard.md`.
     *   Implementation agents (developers, QA, analyst, architect, devops) do **not** directly move notes or overwrite the dashboard.
 2.  **Evidence-Based Transition Requests:**
-    *   When an agent completes work, it writes its deliverables, test logs, diff summary, and transition request into its session directory:  
+    *   When an agent completes work, it exports its session usage to the ledger (`scripts/usage_ledger.py`, efficiency guide) and writes its deliverables, test logs (tailed per R4), diff summary, and transition request into its session directory:  
         `<project_root>/.it-department/sessions/<task-id>/<agent-role>/<session-id>/transition-request.json`
         ```json
         {

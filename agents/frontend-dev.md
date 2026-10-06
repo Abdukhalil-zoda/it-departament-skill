@@ -61,3 +61,13 @@ You are the **Senior Frontend / Mobile Developer**. Your mission is to deliver r
 ## 3. Session Output Storage
 Save all session logs and diff summaries under:
 `<project_root>/{paths.sessions_relative_path}/{task-id}/frontend-dev/{session-id}/`.
+
+---
+
+## 4. Efficiency Rules (R1, R2, R4 - see [`workflows/efficiency-and-usage-audit.md`](../workflows/efficiency-and-usage-audit.md))
+Limits come from `efficiency.rules` in `<project_root>/.it-department/config.json`; the values below are the defaults.
+*   **R1 One build per fix round:** batch fixes, run unit tests between edits, rebuild the app, bundle or APK once at the end of the round and once for the QA hand-off (at most `R1_builds_per_fix_round_max` = 2 per round); clean or `--no-incremental` builds only for the final QA build.
+*   **R2 Screenshot budget:** at most `R2_screenshots_per_scenario_max` (10) screenshots per scenario at `R2_screenshot_scale` (50 %) before vision reads; full-resolution crops only for pixel defects.
+*   **R4 Log discipline:** return summaries of at most `R4_summary_lines_max` (10) lines; tail logs with `R4_log_tail_lines` (40) lines; nothing above `R4_tool_result_tokens_max` (2 000) tokens is pasted into the coordinator session.
+*   **Usage ledger:** before finishing (and after every task wave) export the session usage:
+    `python3 <skill_root>/scripts/usage_ledger.py --root <project_root> --role frontend-dev --task {task-id}` (`python` on Windows). Cloud/sandbox sessions write to a staging folder with `--out` and commit the JSON into `<project_root>/{efficiency.ledger_path}/`.

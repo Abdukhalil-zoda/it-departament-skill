@@ -1,6 +1,6 @@
 {
   "$schema": "./project-config.schema.json",
-  "project_name": "Project Workspace",
+  "project_name": "{PROJECT_NAME}",
   "schema_version": "2.0.0",
   "cto_mode": "VIRTUAL",
   "cto_mode_options": {
@@ -44,5 +44,30 @@
     "production_secrets_agent_access": false,
     "test_secrets_agent_managed": true,
     "commit_real_credentials": false
+  },
+  "efficiency": {
+    "audit_interval_days": 2,
+    "audit_model": "claude-fable-5-1",
+    "report_language": "English",
+    "rules": {
+      "R1_builds_per_fix_round_max": 2,
+      "R2_screenshots_per_scenario_max": 10,
+      "R2_screenshot_scale": 0.5,
+      "R3_full_suite_runs_per_candidate_max": 1,
+      "R4_summary_lines_max": 10,
+      "R4_log_tail_lines": 40,
+      "R4_tool_result_tokens_max": 2000,
+      "R5_queue_wait_minutes_max": 5,
+      "R5_split_jobs_longer_than_minutes": 10
+    },
+    "token_weights": {
+      "input": 1,
+      "cache_write": 2,
+      "cache_read": 0.1,
+      "output": 5
+    },
+    "ledger_path": ".it-department/sessions/_usage/ledger",
+    "jobs_log_path": ".it-department/jobs",
+    "reports_path": "vault/05-Reports"
   }
 }

@@ -49,3 +49,13 @@ Configuration is resolved from `<project_root>/.it-department/config.json`.
 *   Clearly state feasibility scores (1-10), technical trade-offs, and alternative solutions.
 *   Reference explicit task IDs, branch names, candidate commit SHAs, and verification statuses.
 *   Ensure all session logs are written to `<project_root>/.it-department/sessions/<task-id>/cto/<session-id>/`.
+
+---
+
+## 5. Efficiency Governance & Usage Audit (see [`workflows/efficiency-and-usage-audit.md`](../workflows/efficiency-and-usage-audit.md))
+*   **Owner of the efficiency rules R1-R5.** The limits live in `efficiency.rules` of `<project_root>/.it-department/config.json`; changing them is a CTO decision recorded in the decisions journal or an ADR.
+*   **Usage audit cadence:** every `efficiency.audit_interval_days` days (default 2) the strongest available model (`efficiency.audit_model`) runs the audit from [`templates/usage-audit-prompt.md`](../templates/usage-audit-prompt.md) and delivers `<project_root>/{efficiency.reports_path}/usage-audit-<date>.md` plus a message of at most 15 lines with at most 5 proposals. In `cto_mode: "USER"` the user receives it directly; in `cto_mode: "VIRTUAL"` the Virtual CTO reviews it and reports savings to the Business Owner in business terms.
+*   **Decision loop:** approve, reject or amend each proposal; approved changes are applied to the skill rules, agent files, tool defaults or task briefs by the coordinator, and the next audit reports the delta. No proposal is applied silently.
+*   **On demand:** the CTO can trigger an audit at any time by pasting the same prompt into any project session; the interval is changed in `config.json` and in the scheduled task.
+*   **Usage ledger:** before finishing export the session usage:
+    `python3 <skill_root>/scripts/usage_ledger.py --root <project_root> --role cto` (`python` on Windows).

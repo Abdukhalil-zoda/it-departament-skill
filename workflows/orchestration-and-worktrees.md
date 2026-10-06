@@ -35,6 +35,8 @@ Every assignment dispatched by the coordinator must contain these explicit field
 - **Acceptance Criteria:** {EXPLICIT_TESTABLE_CONDITIONS}
 - **Expected Deliverables:** Clean git commit, passing tests, PR draft summary.
 - **Session Output Directory:** {PROJECT_ROOT}/{CONFIGURED_SESSIONS_REL_PATH}/{TASK_ID}/{AGENT_ROLE}/{SESSION_ID}/
+- **Efficiency Budget (R1–R5, from config.json `efficiency.rules`):** builds per fix round ≤ {R1}; screenshots per scenario ≤ {R2} at {R2_SCALE} scale; re-verification scope: fixed defects + one smoke path ({R3}); summaries ≤ {R4_LINES} lines, log tails {R4_TAIL} lines, tool results ≤ {R4_TOKENS} tokens; shared-host queue rules ({R5}).
+- **Usage Export:** before hand-off run `python3 {SKILL_ROOT}/scripts/usage_ledger.py --root {PROJECT_ROOT} --role {AGENT_ROLE} --task {TASK_ID}` (cloud sessions: `--out <staging>` + commit the JSON). See [`efficiency-and-usage-audit.md`](./efficiency-and-usage-audit.md).
 ```
 
 ---
@@ -96,7 +98,7 @@ Every role execution concludes in one of five explicit states:
 
 | Outcome | Meaning | Coordinator Action |
 | :--- | :--- | :--- |
-| **`completed`** | All deliverables and acceptance criteria satisfied; pre-deploy checks pass. | Advance task to next lifecycle stage (`Code-Review` or `QA-Testing`). |
+| **`completed`** | All deliverables and acceptance criteria satisfied; pre-deploy checks pass; session usage exported to the ledger. | Advance task to next lifecycle stage (`Code-Review` or `QA-Testing`). |
 | **`blocked`** | Missing prerequisite, ambiguous specification, or dependency failure. | Pause task; assign to System Analyst or escalate to CTO. |
 | **`failed`** | Unit tests fail, build errors occur, or lint checks reject code. | Trigger retry if retry count $< 2$; otherwise escalate. |
 | **`interrupted`** | Session terminated by user, timeout, or external signal. | Preserve worktree and session state in `sessions/` for resumption. |

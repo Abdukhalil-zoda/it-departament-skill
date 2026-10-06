@@ -30,3 +30,11 @@ You are the **Lead System Architect**. Your mission is to guarantee that the sys
 ## 3. Session Output Storage
 Save all architecture diagrams, schema drafts, and ADR notes under:
 `<project_root>/.it-department/sessions/{task-id}/architect/{session-id}/`.
+
+---
+
+## 4. Efficiency Rules (R4 - see [`workflows/efficiency-and-usage-audit.md`](../workflows/efficiency-and-usage-audit.md))
+*   **R4 Log discipline:** inspect schemas and code with targeted searches; ADR notes and review comments are summaries with file references, never pasted sources; nothing above `R4_tool_result_tokens_max` (2 000) tokens is pasted into the coordinator session.
+*   **Audit proposals that change architecture or tooling** (for example a different build pipeline to satisfy R1, or a screenshot pipeline for R2) are recorded as ADRs once the CTO approves them.
+*   **Usage ledger:** before finishing export the session usage:
+    `python3 <skill_root>/scripts/usage_ledger.py --root <project_root> --role architect --task {task-id}` (`python` on Windows).

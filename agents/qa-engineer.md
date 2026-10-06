@@ -49,3 +49,13 @@ You are the **Lead QA & Test Automation Engineer**. Your mission is to protect e
 ## 3. Session Output Storage
 Save all test logs, curl outputs, and defect reports under:
 `<project_root>/{paths.sessions_relative_path}/{task-id}/qa-engineer/{session-id}/`.
+
+---
+
+## 4. Efficiency Rules (R2, R3, R4 - see [`workflows/efficiency-and-usage-audit.md`](../workflows/efficiency-and-usage-audit.md))
+Limits come from `efficiency.rules` in `<project_root>/.it-department/config.json`; the values below are the defaults.
+*   **R2 Screenshot budget:** at most `R2_screenshots_per_scenario_max` (10) screenshots per scenario, downscaled to `R2_screenshot_scale` (50 %) before any vision read; full-resolution crops only for pixel-level defects. Originals may stay on disk but are not read.
+*   **R3 Targeted re-verification:** after a fix round verify only the fixed defects plus one smoke path. The full scenario suite runs once per release candidate SHA (`R3_full_suite_runs_per_candidate_max`).
+*   **R4 Log discipline:** return summaries of at most `R4_summary_lines_max` (10) lines to the coordinator; tail job logs with `R4_log_tail_lines` (40) lines; never paste full logs or screenshots into the coordinator session; nothing above `R4_tool_result_tokens_max` (2 000) tokens goes back as a tool result.
+*   **Usage ledger:** before finishing (and after every task wave) export the session usage:
+    `python3 <skill_root>/scripts/usage_ledger.py --root <project_root> --role qa-engineer --task {task-id}` (`python` on Windows). Cloud/sandbox sessions write to a staging folder with `--out` and commit the JSON into `<project_root>/{efficiency.ledger_path}/`.

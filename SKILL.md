@@ -7,6 +7,8 @@ description: >-
   architectural alternatives, discovers hidden context ("Ask Why"), and enforces the Stubborn Donkey
   Override gate before implementing anti-patterns. Enforces worktree isolation, pre-deploy CI checks,
   QA verification against immutable release candidates, and project telemetry in a local Obsidian vault.
+  Includes a token optimizer: efficiency rules R1-R5 in every task brief, a per-session usage ledger
+  (tokens and machine time), and a scheduled usage audit that proposes savings to the CTO.
 ---
 
 # IT Department Skill: Coordinated Software Engineering Organization
@@ -24,10 +26,11 @@ skill_root/                           # The installed skill package (reusable, s
 ├── SKILL.md                          # Main routing instructions & operational entrypoint
 ├── assets/                           # Reusable templates (vault-template, config-template)
 ├── agents/                           # Role system prompts & boundaries
-├── templates/                        # Task, bug, and ADR templates
-├── workflows/                        # Execution runbooks
+├── templates/                        # Task, bug, ADR, and usage-audit prompt templates
+├── workflows/                        # Execution runbooks (incl. efficiency-and-usage-audit.md)
 ├── references/                       # Authoritative contracts, lifecycle, & examples
-└── scripts/                          # Deterministic initialization & validation helpers
+└── scripts/                          # init/validate helpers, usage_ledger.py, usage_report.py,
+                                      # schedule-usage-audit.{ps1,sh} (Python 3.8+, stdlib only)
 
 <project_root>/                       # Target project workspace (contains project code)
 ├── vault/                            # Project-local Obsidian vault
@@ -35,10 +38,13 @@ skill_root/                           # The installed skill package (reusable, s
 │   ├── 01-Tasks/                     # Active task pipeline (Backlog -> Ready-For-Release)
 │   ├── 02-Bugs/                      # Defect tracking notes
 │   ├── 03-ADR/                       # Architectural Decision Records
-│   └── 04-Archive/                   # ZERO-DELETION PERMANENT ARCHIVE
+│   ├── 04-Archive/                   # ZERO-DELETION PERMANENT ARCHIVE
+│   └── 05-Reports/                   # Usage audit reports (usage-audit-<date>.md + .json)
 └── .it-department/                   # Project runtime data & telemetry
-    ├── config.json                   # Project configuration & delegated authority
+    ├── config.json                   # Project configuration, delegated authority, efficiency rules
     ├── sessions/                     # Work records: <task-id>/<agent-role>/<session-id>/
+    │   └── _usage/ledger/            # Usage ledger: one aggregate JSON per session transcript
+    ├── jobs/                         # Optional machine-time feed (job logs / jobs.jsonl)
     └── worktrees/                    # Isolated git worktrees: <task-id>/
 ```
 
@@ -64,7 +70,7 @@ pwsh -File "<skill_root>/scripts/validate-project.ps1" -ProjectRoot "<project_ro
 *(Or `./scripts/validate-project.sh "<project_root>"` on Linux/macOS).*
 
 **Guarantees:**
-*   Idempotent: Preserves existing notes, project configurations, and customizations. Never overwrites or deletes project data.
+*   Idempotent: Preserves existing notes, project configurations, and customizations. Never overwrites or deletes project data. Re-running `init-project` on an older project adds the new folders (`vault/05-Reports/`, `sessions/_usage/ledger/`) without touching anything else; the `efficiency` config block is reported, not injected (copy it from `assets/config-template.json`).
 *   Strict Boundary Checks: Rejects invalid paths, root collisions, or directory traversal before mutating the filesystem.
 *   Fictional examples (such as `SHOP-102`) remain in `references/examples/` and are **never** copied into the project's active backlog.
 
@@ -170,4 +176,35 @@ flowchart TD
 *   **Branching & Multi-Repo Worktree Isolation:** Isolated git worktrees under configured paths prevent branch collisions across concurrent tasks and multi-repo setups. Defaults configurable in `config.json`. Guide: [`workflows/git-branching-strategy.md`](./workflows/git-branching-strategy.md).
 *   **Immutable Candidate Verification & Non-Destructive Rollback:** Review, QA, and release approvals attach to an **immutable commit SHA**. Unchanged candidates are not invalidated by unrelated commits. Rollbacks redeploy previous stable artifacts rather than force-pushing Git branches. Guide: [`workflows/review-qa-and-release.md`](./workflows/review-qa-and-release.md).
 *   **Secrets & Incident Triage:** Mock credentials safe in git; real staging credentials uncommitted; production secrets strictly human-managed. Guide: [`workflows/secrets-and-incidents.md`](./workflows/secrets-and-incidents.md).
+*   **Efficiency Rules & Usage Audit (R1–R5):** one build per fix round, screenshot budget, targeted re-verification, log discipline, shared-host scheduling. Every session exports its token usage with `scripts/usage_ledger.py`; every `efficiency.audit_interval_days` days the strongest model runs `scripts/usage_report.py` and sends the CTO ≤ 5 optimisation proposals (`templates/usage-audit-prompt.md`). Guide: [`workflows/efficiency-and-usage-audit.md`](./workflows/efficiency-and-usage-audit.md).
 *   **Obsidian Integration & Fallback:** Portable MCP configuration with native filesystem fallback. Guide: [`references/mcp-integration.md`](./references/mcp-integration.md).
+
+---
+
+## 8. Token Optimizer: Efficiency Rules, Usage Ledger & Scheduled Audit
+
+Tokens and machine time are a budget like any other, so the department measures them and tunes itself. Limits live in the `efficiency` block of `<project_root>/.it-department/config.json` (defaults in [`assets/config-template.json`](./assets/config-template.json)).
+
+| Rule | Limit (config key, default) | Enforced by |
+| :--- | :--- | :--- |
+| **R1** One build per fix round | `R1_builds_per_fix_round_max` (2) | developers; task brief |
+| **R2** Screenshot budget, downscaled before vision reads | `R2_screenshots_per_scenario_max` (10), `R2_screenshot_scale` (0.5) | developers, QA |
+| **R3** Targeted re-verification; full suite once per candidate SHA | `R3_full_suite_runs_per_candidate_max` (1) | QA |
+| **R4** Log discipline: short summaries, tailed logs, token cap on tool results | `R4_summary_lines_max` (10), `R4_log_tail_lines` (40), `R4_tool_result_tokens_max` (2000) | all roles |
+| **R5** One queue per shared build/device host | `R5_queue_wait_minutes_max` (5), `R5_split_jobs_longer_than_minutes` (10) | coordinator, devops |
+
+### Coordinator duties
+1.  **Budget in every brief:** copy the applicable R1–R5 limits into each Task Assignment Contract ([`workflows/orchestration-and-worktrees.md`](./workflows/orchestration-and-worktrees.md) §2).
+2.  **Usage ledger:** every session (coordinator, developers, QA, auditors, sub-agents) exports its usage after each task wave and before it ends:
+    ```bash
+    python3 <skill_root>/scripts/usage_ledger.py --root <project_root> --role <agent-role> --task <task-id>   # python on Windows
+    ```
+    Cloud/sandbox sessions export with `--out <staging-dir>` and commit the JSON into `<project_root>/{efficiency.ledger_path}/` because their transcripts vanish with the sandbox. Aggregates only, no message text.
+3.  **Usage audit** every `efficiency.audit_interval_days` days (default 2) or on CTO request, run by the strongest model (`efficiency.audit_model`) with [`templates/usage-audit-prompt.md`](./templates/usage-audit-prompt.md):
+    ```bash
+    python3 <skill_root>/scripts/usage_report.py --root <project_root>   # -> vault/05-Reports/usage-audit-<date>.md (+ .json sidecar)
+    ```
+    The auditor fills the judgement sections, adds a row to the dashboard's "Usage Audits" table, commits on the integration branch and sends the CTO ≤ 15 lines with ≤ 5 evidence-backed proposals. Approved proposals are applied by the coordinator; the next audit reports the delta.
+4.  **Schedule it:** a cloud routine (e.g. Claude Code `/schedule`, cron `CRON_TZ=<tz> 51 8 */2 * *`, the prompt template, the audit model) or the local scheduler `scripts/schedule-usage-audit.ps1` / `.sh` (`-DryRun`, `-RunNow`, `-Register`). Keep `audit_interval_days` and the schedule in sync.
+
+Full guide: [`workflows/efficiency-and-usage-audit.md`](./workflows/efficiency-and-usage-audit.md).

@@ -99,6 +99,8 @@ SESSIONS_REL_PATH=".it-department/sessions"
 WORKTREES_REL_PATH=".it-department/worktrees"
 PROJECT_NAME_EFFECTIVE="$PROJECT_NAME_INPUT"
 CTO_MODE_EFFECTIVE="VIRTUAL"
+LEDGER_REL_PATH=".it-department/sessions/_usage/ledger"
+HAS_EFFICIENCY="yes"
 
 if [ -f "$PROJECT_CONFIG_PATH" ]; then
     echo "    Loading existing .it-department/config.json..."
@@ -113,6 +115,9 @@ print(p.get("sessions_relative_path", ".it-department/sessions"))
 print(p.get("worktrees_relative_path", ".it-department/worktrees"))
 print(cfg.get("project_name", "Project Workspace"))
 print(cfg.get("cto_mode", "VIRTUAL"))
+e = cfg.get("efficiency") or {}
+print(e.get("ledger_path") or ".it-department/sessions/_usage/ledger")
+print("yes" if cfg.get("efficiency") else "no")
 ' "$PROJECT_CONFIG_PATH")
     elif [ "$JSON_ENGINE" = "node" ]; then
         READ_VALUES=$(node -e '
@@ -124,6 +129,9 @@ console.log(p.sessions_relative_path || ".it-department/sessions");
 console.log(p.worktrees_relative_path || ".it-department/worktrees");
 console.log(cfg.project_name || "Project Workspace");
 console.log(cfg.cto_mode || "VIRTUAL");
+const e = cfg.efficiency || {};
+console.log(e.ledger_path || ".it-department/sessions/_usage/ledger");
+console.log(cfg.efficiency ? "yes" : "no");
 ' "$PROJECT_CONFIG_PATH")
     elif [ "$JSON_ENGINE" = "jq" ]; then
         VAULT_REL_PATH=$(jq -r '.paths.vault_relative_path // "vault"' "$PROJECT_CONFIG_PATH")
@@ -131,10 +139,12 @@ console.log(cfg.cto_mode || "VIRTUAL");
         WORKTREES_REL_PATH=$(jq -r '.paths.worktrees_relative_path // ".it-department/worktrees"' "$PROJECT_CONFIG_PATH")
         PROJECT_NAME_EFFECTIVE=$(jq -r '.project_name // "Project Workspace"' "$PROJECT_CONFIG_PATH")
         CTO_MODE_EFFECTIVE=$(jq -r '.cto_mode // "VIRTUAL"' "$PROJECT_CONFIG_PATH")
+        LEDGER_REL_PATH=$(jq -r '.efficiency.ledger_path // ".it-department/sessions/_usage/ledger"' "$PROJECT_CONFIG_PATH")
+        HAS_EFFICIENCY=$(jq -r 'if .efficiency then "yes" else "no" end' "$PROJECT_CONFIG_PATH")
     fi
 
     if [ "$JSON_ENGINE" != "jq" ]; then
-        IFS=$'\n' read -r -d '' VAULT_REL_PATH SESSIONS_REL_PATH WORKTREES_REL_PATH PROJECT_NAME_EFFECTIVE CTO_MODE_EFFECTIVE <<< "$READ_VALUES" || true
+        IFS=$'\n' read -r -d '' VAULT_REL_PATH SESSIONS_REL_PATH WORKTREES_REL_PATH PROJECT_NAME_EFFECTIVE CTO_MODE_EFFECTIVE LEDGER_REL_PATH HAS_EFFICIENCY <<< "$READ_VALUES" || true
     fi
 fi
 
@@ -173,13 +183,22 @@ validate_subpath() {
 RESOLVED_VAULT_DIR=$(validate_subpath "$VAULT_REL_PATH" "paths.vault_relative_path")
 RESOLVED_SESSIONS_DIR=$(validate_subpath "$SESSIONS_REL_PATH" "paths.sessions_relative_path")
 RESOLVED_WORKTREES_DIR=$(validate_subpath "$WORKTREES_REL_PATH" "paths.worktrees_relative_path")
+RESOLVED_LEDGER_DIR=$(validate_subpath "$LEDGER_REL_PATH" "efficiency.ledger_path")
+RESOLVED_USAGE_DIR="$(dirname "$RESOLVED_LEDGER_DIR")"
 
 echo "==> Initializing IT Department for Project: $PROJECT_NAME_EFFECTIVE"
 echo "    Project Root: $PROJECT_ROOT"
 echo "    Skill Root:   $SKILL_ROOT"
 
 # --- 4. Mutate Filesystem Safely & Idempotently ---
-mkdir -p "$PROJECT_RUNTIME_DIR" "$RESOLVED_SESSIONS_DIR" "$RESOLVED_WORKTREES_DIR" "$RESOLVED_VAULT_DIR"
+mkdir -p "$PROJECT_RUNTIME_DIR" "$RESOLVED_SESSIONS_DIR" "$RESOLVED_WORKTREES_DIR" "$RESOLVED_VAULT_DIR" "$RESOLVED_LEDGER_DIR"
+
+# Token optimizer: keep ledger/*.json (aggregates only); ignore raw transcript copies and audit runs
+if [ ! -f "$RESOLVED_USAGE_DIR/.gitignore" ]; then
+    printf '%s\n' \
+        "# IT Department usage ledger: keep ledger/*.json (aggregates only); ignore raw transcript copies and audit runs" \
+        "raw/" "audit-runs/" "audit-prompt.generated.md" > "$RESOLVED_USAGE_DIR/.gitignore"
+fi
 
 if [ -f "$SCHEMA_TEMPLATE_PATH" ] && [ ! -f "$PROJECT_SCHEMA_PATH" ]; then
     cp "$SCHEMA_TEMPLATE_PATH" "$PROJECT_SCHEMA_PATH"
@@ -239,3 +258,7 @@ echo "==> Initialization completed successfully."
 echo "    Vault:     $RESOLVED_VAULT_DIR"
 echo "    Sessions:  $RESOLVED_SESSIONS_DIR"
 echo "    Worktrees: $RESOLVED_WORKTREES_DIR"
+echo "    Ledger:    $RESOLVED_LEDGER_DIR"
+if [ "$HAS_EFFICIENCY" != "yes" ]; then
+    echo "    [HINT] config.json has no 'efficiency' block: the token optimizer uses default limits and paths. Copy the block from '$CONFIG_TEMPLATE_PATH' to tune rules R1-R5 and the audit interval."
+fi

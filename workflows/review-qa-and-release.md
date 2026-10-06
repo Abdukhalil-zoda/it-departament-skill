@@ -52,6 +52,8 @@ QA test results, security scan outputs, and reviewer approvals are recorded agai
 *   `Test Execution: PASS (Candidate: $RELEASE_CANDIDATE_SHA, Tests: 184 passed, 0 failed)`
 *   `Defect Audit: PASS (0 Critical, 0 Major defects open)`
 
+*Efficiency rule R3 (targeted re-verification):* the full regression and scenario suite runs **once per candidate SHA**. After a fix round QA re-verifies only the fixed defects plus one smoke path; a new full run is owed only when the candidate SHA changes (Step 4). Screenshot evidence follows the R2 budget (see [`efficiency-and-usage-audit.md`](./efficiency-and-usage-audit.md)).
+
 ### Step 4: The Candidate Invalidation Rule
 *   The frozen candidate SHA remains valid for testing even if newer, unrelated commits arrive on `$INT_BRANCH`.
 *   **Revalidation is triggered only when:**
