@@ -47,6 +47,14 @@
 
 ---
 
+## ✍️ Content & Localization Reviews (`vault/05-Reports/`, two checkpoints: `workflows/content-review.md`)
+
+| Date | Checkpoint | Scope (task / candidate SHA) | Locales | Findings (C/M/m/T) | Verdict | Report |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| *(No content review yet — glossary and style guide live in `vault/06-Content/`)* | | | | | | |
+
+---
+
 ## 📦 Recent Production Releases (`vault/04-Archive/Completed-Tasks/`)
 
 | Release Tag | Commit SHA | Date | Tasks Included | Verified By |

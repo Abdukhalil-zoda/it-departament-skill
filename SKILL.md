@@ -8,7 +8,8 @@ description: >-
   Override gate before implementing anti-patterns. Enforces worktree isolation, pre-deploy CI checks,
   QA verification against immutable release candidates, and project telemetry in a local Obsidian vault.
   Includes a token optimizer: efficiency rules R1-R5 in every task brief, a per-session usage ledger
-  (tokens and machine time), and a scheduled usage audit that proposes savings to the CTO.
+  (tokens and machine time), and a scheduled usage audit that proposes savings to the CTO. A Content &
+  Localization Reviewer checks every user-facing text twice: at task creation and before each release.
 ---
 
 # IT Department Skill: Coordinated Software Engineering Organization
@@ -26,11 +27,11 @@ skill_root/                           # The installed skill package (reusable, s
 ├── SKILL.md                          # Main routing instructions & operational entrypoint
 ├── assets/                           # Reusable templates (vault-template, config-template)
 ├── agents/                           # Role system prompts & boundaries
-├── templates/                        # Task, bug, ADR, and usage-audit prompt templates
-├── workflows/                        # Execution runbooks (incl. efficiency-and-usage-audit.md)
+├── templates/                        # Task, bug, ADR, usage-audit prompt, content-review report templates
+├── workflows/                        # Execution runbooks (incl. efficiency-and-usage-audit.md, content-review.md)
 ├── references/                       # Authoritative contracts, lifecycle, & examples
 └── scripts/                          # init/validate helpers, usage_ledger.py, usage_report.py,
-                                      # schedule-usage-audit.{ps1,sh} (Python 3.8+, stdlib only)
+                                      # content_inventory.py, schedule-usage-audit.{ps1,sh} (Python 3.8+, stdlib only)
 
 <project_root>/                       # Target project workspace (contains project code)
 ├── vault/                            # Project-local Obsidian vault
@@ -39,7 +40,8 @@ skill_root/                           # The installed skill package (reusable, s
 │   ├── 02-Bugs/                      # Defect tracking notes
 │   ├── 03-ADR/                       # Architectural Decision Records
 │   ├── 04-Archive/                   # ZERO-DELETION PERMANENT ARCHIVE
-│   └── 05-Reports/                   # Usage audit reports (usage-audit-<date>.md + .json)
+│   ├── 05-Reports/                   # Usage audits, content inventories and content reviews (+ .json sidecars)
+│   └── 06-Content/                   # glossary.md, style-guide.md (owned by the Content Reviewer)
 └── .it-department/                   # Project runtime data & telemetry
     ├── config.json                   # Project configuration, delegated authority, efficiency rules
     ├── sessions/                     # Work records: <task-id>/<agent-role>/<session-id>/
@@ -86,6 +88,7 @@ Markdown files in `agents/` define specialized role contexts and boundaries:
 *   [`agents/frontend-dev.md`](./agents/frontend-dev.md) — Responsive UI/Mobile components, accessibility, state handling.
 *   [`agents/qa-engineer.md`](./agents/qa-engineer.md) — Acceptance criteria testing, defect logging (`[bug]`), regression.
 *   [`agents/devops-engineer.md`](./agents/devops-engineer.md) — CI/CD automation, pipeline incident triage, secrets boundaries.
+*   [`agents/content-reviewer.md`](./agents/content-reviewer.md) — User-facing text and localization: intake review of every task's strings, pre-release review of the candidate, glossary and style guide, report to the CTO.
 
 ### Subagents vs. Sequential Fallback
 *   **Subagent Mode (Preferred):** When the host provides subagent capabilities (`invoke_subagent`), the coordinator dispatches tasks to isolated subagents with separate context and dedicated worktrees.
@@ -155,7 +158,8 @@ The coordinator selects the delivery route based on risk and scope:
 
 ```mermaid
 flowchart TD
-    T["1. Task in vault/01-Tasks/Ready-For-Dev/"] --> WT["2. Create Dedicated Worktree<br/>.it-department/worktrees/<task-id>"]
+    CR1["0. Content Review (intake)<br/>strings table of the spec, every locale"] --> T["1. Task in vault/01-Tasks/Ready-For-Dev/"]
+    T --> WT["2. Create Dedicated Worktree<br/>.it-department/worktrees/<task-id>"]
     WT --> DEV["3. Implementation & Unit Tests (>=80% coverage)"]
     DEV --> CI["4. Pre-Deploy CI Checks in Worktree"]
     CI --> PR["5. Peer Code Review & PR"]
@@ -166,7 +170,9 @@ flowchart TD
     QA -->|Blocking Defect (Critical/Major)| BUG["Open Bug in vault/02-Bugs/"]
     BUG --> WT
     QA -->|Passed & No Blocking Defects| CAND["9. Freeze Release Candidate Commit SHA<br/>Inspect Complete Production Diff"]
-    CAND --> SIGN["10. CTO Production Release Gate"]
+    CAND --> CR2["9b. Content & Localization Review<br/>all texts of the candidate, every locale"]
+    CR2 -->|Blocking content defect| BUG
+    CR2 -->|Approved / deferrals signed| SIGN["10. CTO Production Release Gate"]
     SIGN --> PROD["11. Deploy to Production Branch (e.g. main)"]
     PROD --> ARCH["12. Post-Deploy Archival in vault/04-Archive/Completed-Tasks/<br/>Update 00-Dashboard.md"]
 ```
@@ -177,6 +183,7 @@ flowchart TD
 *   **Immutable Candidate Verification & Non-Destructive Rollback:** Review, QA, and release approvals attach to an **immutable commit SHA**. Unchanged candidates are not invalidated by unrelated commits. Rollbacks redeploy previous stable artifacts rather than force-pushing Git branches. Guide: [`workflows/review-qa-and-release.md`](./workflows/review-qa-and-release.md).
 *   **Secrets & Incident Triage:** Mock credentials safe in git; real staging credentials uncommitted; production secrets strictly human-managed. Guide: [`workflows/secrets-and-incidents.md`](./workflows/secrets-and-incidents.md).
 *   **Efficiency Rules & Usage Audit (R1–R5):** one build per fix round, screenshot budget, targeted re-verification, log discipline, shared-host scheduling. Every session exports its token usage with `scripts/usage_ledger.py`; every `efficiency.audit_interval_days` days the strongest model runs `scripts/usage_report.py` and sends the CTO ≤ 5 optimisation proposals (`templates/usage-audit-prompt.md`). Guide: [`workflows/efficiency-and-usage-audit.md`](./workflows/efficiency-and-usage-audit.md).
+*   **Content & Localization Review (two checkpoints):** the Content Reviewer finalizes every user-facing string of a task in every locale before `Ready-For-Dev` and reviews all texts of the release candidate before the CTO gate, with a report to the CTO; `Critical`/`Major` content defects block the release. Guide: [`workflows/content-review.md`](./workflows/content-review.md).
 *   **Obsidian Integration & Fallback:** Portable MCP configuration with native filesystem fallback. Guide: [`references/mcp-integration.md`](./references/mcp-integration.md).
 
 ---
@@ -208,3 +215,22 @@ Tokens and machine time are a budget like any other, so the department measures 
 4.  **Schedule it:** a cloud routine (e.g. Claude Code `/schedule`, cron `CRON_TZ=<tz> 51 8 */2 * *`, the prompt template, the audit model) or the local scheduler `scripts/schedule-usage-audit.ps1` / `.sh` (`-DryRun`, `-RunNow`, `-Register`). Keep `audit_interval_days` and the schedule in sync.
 
 Full guide: [`workflows/efficiency-and-usage-audit.md`](./workflows/efficiency-and-usage-audit.md).
+
+---
+
+## 9. Content & Localization Review (two checkpoints)
+
+Text is where a pipeline is weakest: tests pass with an untranslated button, screenshots look fine with a mistranslated label, and generated content ships in the wrong language without a build breaking. The **Content & Localization Reviewer** ([`agents/content-reviewer.md`](./agents/content-reviewer.md)) therefore works twice per change and reports to the CTO.
+
+| Checkpoint | When | Input | Output |
+| :--- | :--- | :--- | :--- |
+| **A — Task creation** | spec with `content_review: required` (any user-facing text, localized resource or shipped content), before `Ready-For-Dev` | §6 strings table of the task in every locale, glossary, style guide | final wording in the table; `content_review_intake: approved` or `changes-requested` (max 1 cycle, then the CTO decides) |
+| **B — Pre-release** | frozen release candidate SHA, in parallel with QA | `scripts/content_inventory.py --base <production-sha>` (changed strings, missing/empty keys, placeholders, wrong writing system, hardcoded markup text, wrong-language content data), QA screenshots | `vault/05-Reports/content-review-<date>-<sha7>.md`, bug notes with `category: content`, dashboard row, ≤ 15-line CTO report, verdict `approved` / `approved-with-deferrals` / `blocked` |
+
+### Coordinator duties
+1.  Dispatch the reviewer at both checkpoints; refuse `Ready-For-Dev` while a required intake verdict is `pending` or `changes-requested`; refuse the CTO gate without the pre-release verdict for the candidate SHA.
+2.  Developers copy user-facing strings verbatim from the approved table into the project's resource files for every locale and run the inventory before hand-off; they never author UI text.
+3.  Keep `content_review` in `config.json` current (locales, source locale, resource globs, inline code tables, content data sources) so the inventory sees every text.
+4.  `Critical`/`Major` content defects block like functional ones (`content_review.block_release_on`); `Minor` deferrals need the CTO's signature in the review report.
+
+Full guide: [`workflows/content-review.md`](./workflows/content-review.md). Reference files: `vault/06-Content/glossary.md`, `vault/06-Content/style-guide.md`; report template [`templates/content-review-report.md`](./templates/content-review-report.md).

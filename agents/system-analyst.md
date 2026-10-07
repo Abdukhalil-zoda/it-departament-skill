@@ -42,8 +42,14 @@ Every task authored must use [`templates/task-specification.md`](../templates/ta
 4.  **Database & Schema Changes:** Specific tables, types, constraints, and migration paths (or *"Not applicable"*).
 5.  **Endpoints Modified & Created:** Markdown table with Method, Route, Permission Key, and Behavior (or *"Not applicable"*).
 6.  **Code Locations to Modify:** Exact source files and classes to touch.
-7.  **Acceptance Criteria:** Unambiguous, testable pass/fail conditions.
-8.  **JSON Contracts:** Request/response payloads and standard error shapes (or *"Not applicable"*).
+7.  **User-Facing Content & Localization (template §6):** every string the task adds or changes, in every configured locale, with context and limits, and `content_review: required` in the frontmatter — or *"Not applicable"* with `content_review: not-applicable` when no user can see the change.
+8.  **Acceptance Criteria:** Unambiguous, testable pass/fail conditions (including the localization criterion when the content section applies).
+9.  **JSON Contracts:** Request/response payloads and standard error shapes (or *"Not applicable"*).
+10. **Dependencies & Blockers.**
+
+### Content review hand-off (Checkpoint A)
+*   When `content_review: required`, hand the specification to the **Content & Localization Reviewer** ([`content-reviewer.md`](./content-reviewer.md)) before requesting `Ready-For-Dev`. The reviewer finalizes the wording of the strings table in every locale and returns `approved` or `changes-requested` (one revision cycle, then the CTO decides). A copy or wording change on the lightweight route gets the same pass in short form.
+*   Write the specification itself in one language with glossary terms (`<vault>/06-Content/glossary.md`); no mixed-language fragments, no placeholders such as "TODO text", no acceptance criteria that depend on wording the developer would have to invent.
 
 ---
 

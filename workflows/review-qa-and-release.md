@@ -12,7 +12,7 @@ A software release cannot be approved simply because individual sprint tickets a
 flowchart TD
     INT["Integration Branch (configured in config.json)"] --> FREEZE["1. Freeze Candidate Commit SHA<br/>git -C <repo> rev-parse <integration_branch>"]
     FREEZE --> DIFF["2. Inspect Complete Production Diff<br/>git -C <repo> diff <production_branch>...<candidate-sha>"]
-    DIFF --> TEST["3. Execute Full Regression & QA Suite on <candidate-sha>"]
+    DIFF --> TEST["3. Full Regression, QA Suite & Content Review on <candidate-sha>"]
     TEST --> PASS{"All Tests Pass & Zero Blocking Defects?"}
     PASS -- "NO" --> BLOCK["Block Release & Assign Fix"]
     PASS -- "YES" --> SIGN["4. CTO Production Sign-off Gate"]
@@ -54,6 +54,12 @@ QA test results, security scan outputs, and reviewer approvals are recorded agai
 
 *Efficiency rule R3 (targeted re-verification):* the full regression and scenario suite runs **once per candidate SHA**. After a fix round QA re-verifies only the fixed defects plus one smoke path; a new full run is owed only when the candidate SHA changes (Step 4). Screenshot evidence follows the R2 budget (see [`efficiency-and-usage-audit.md`](./efficiency-and-usage-audit.md)).
 
+### Step 3b: Content & Localization Review of the Candidate (parallel to QA)
+The Content Reviewer ([`agents/content-reviewer.md`](../agents/content-reviewer.md)) reviews the same candidate SHA. `scripts/content_inventory.py --root <project_root> --base "$PRODUCTION_BASELINE_SHA"` lists every string added or changed since the baseline, missing or empty keys, placeholder mismatches, wrong writing systems, hardcoded markup text and wrong-language content data; the reviewer reads the texts in every locale, logs content defects as bug notes (`category: content`) and records the verdict against the SHA:
+*   `Content Review: APPROVED-WITH-DEFERRALS (Candidate: $RELEASE_CANDIDATE_SHA, locales ru/uz, 0 Critical, 0 Major, 2 Minor deferred by CTO, report vault/05-Reports/content-review-<date>-<sha7>.md)`
+
+A `blocked` verdict (open `Critical`/`Major` content defect) stops the release exactly like a functional blocker; the verdict follows the same invalidation rule as QA evidence (Step 4). Guide: [`content-review.md`](./content-review.md).
+
 ### Step 4: The Candidate Invalidation Rule
 *   The frozen candidate SHA remains valid for testing even if newer, unrelated commits arrive on `$INT_BRANCH`.
 *   **Revalidation is triggered only when:**
@@ -62,7 +68,7 @@ QA test results, security scan outputs, and reviewer approvals are recorded agai
     3. Build, environment, or dependency inputs affecting the release artifact change.
 
 ### Step 5: Production Deployment
-Once authorized in accordance with `delegated_authorities` and CTO sign-off:
+Once authorized in accordance with `delegated_authorities` and CTO sign-off (QA verdict **and** content review verdict attached to the same candidate SHA, deferrals signed):
 1.  Deploy the built artifact corresponding to `$RELEASE_CANDIDATE_SHA` using the project's deployment mechanism (e.g. CI/CD deploy pipeline, container release).
 2.  Update the production branch ref in Git cleanly via fast-forward merge or release tag:
     ```bash

@@ -10,6 +10,8 @@ date_created: 2026-09-10
 date_updated: 2026-09-10
 pr_link: ""
 qa_status: pending
+content_review: not-applicable # internal service-to-service API; error payloads are developer-facing (see workflows/content-review.md)
+content_review_intake: not-applicable
 cto_approved: true
 tags:
   - example

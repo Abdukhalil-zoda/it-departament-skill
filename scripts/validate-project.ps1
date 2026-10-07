@@ -247,6 +247,63 @@ if (-not (Test-Path -LiteralPath $configPath)) {
             }
         }
 
+        # Content review section (Content & Localization Reviewer) - optional, strictly validated when present
+        if (-not ($configObj.PSObject.Properties['content_review'] -and $configObj.content_review)) {
+            Write-Host "    [WARN] Config has no 'content_review' section: content review uses defaults (source locale 'en', any locale found, standard resource globs)."
+        } else {
+            $crv = $configObj.content_review
+            if ($null -ne $crv.enabled -and $crv.enabled -isnot [bool]) {
+                $failures += "Field 'content_review.enabled' must be a boolean."
+            }
+            if ($null -ne $crv.source_locale -and [string]::IsNullOrWhiteSpace([string]$crv.source_locale)) {
+                $failures += "Field 'content_review.source_locale' must be a non-empty string."
+            }
+            if ($null -ne $crv.locales) {
+                if (@($crv.locales).Count -eq 0) {
+                    $failures += "Field 'content_review.locales' must be a non-empty array of locale codes."
+                }
+                foreach ($loc in @($crv.locales)) {
+                    if ([string]::IsNullOrWhiteSpace([string]$loc)) { $failures += "Field 'content_review.locales' contains an empty entry." }
+                }
+            }
+            foreach ($cp in @($crv.checkpoints)) {
+                if ($cp -notin @("task-creation", "pre-release")) {
+                    $failures += "Invalid content_review.checkpoints entry: '$cp'. Allowed: task-creation, pre-release."
+                }
+            }
+            foreach ($s in @($crv.block_release_on)) {
+                if ($s -notin @("Critical", "Major", "Minor", "Trivial")) {
+                    $failures += "Invalid severity in content_review.block_release_on: '$s'."
+                }
+            }
+            foreach ($rp in @("glossary_path", "style_guide_path", "reports_path")) {
+                $val = $crv.$rp
+                if ($null -eq $val) { continue }
+                if ([string]::IsNullOrWhiteSpace($val)) {
+                    $failures += "Field 'content_review.$rp' must not be empty."
+                } elseif ([System.IO.Path]::IsPathRooted($val)) {
+                    $failures += "Field 'content_review.$rp' must be relative, got absolute: '$val'."
+                } else {
+                    $resolved = [System.IO.Path]::GetFullPath([System.IO.Path]::Combine($canonicalProjectRoot, $val))
+                    if (-not (Test-IsStrictInside $resolved $canonicalProjectRoot)) {
+                        $failures += "Field 'content_review.$rp' ('$val') traverses outside project root: '$resolved'."
+                    }
+                }
+            }
+            foreach ($lp in @("text_sources", "markup_sources", "content_data_sources", "exclude")) {
+                $val = $crv.$lp
+                if ($null -ne $val -and -not ($val -is [System.Collections.IList])) {
+                    $failures += "Field 'content_review.$lp' must be an array of glob patterns."
+                }
+            }
+            foreach ($it in @($crv.inline_tables)) {
+                if ($null -eq $it) { continue }
+                if ([string]::IsNullOrWhiteSpace([string]$it.path) -or $null -eq $it.locales -or @($it.locales).Count -eq 0) {
+                    $failures += "Each content_review.inline_tables entry needs 'path' and a non-empty 'locales' array."
+                }
+            }
+        }
+
         if ($failures.Count -eq 0) {
             Write-Host "    [PASS] .it-department/config.json is valid and strictly conforms to contract."
         }
@@ -275,7 +332,8 @@ if ($configObj -and $configObj.paths) {
         "04-Archive/Completed-Tasks",
         "04-Archive/Resolved-Bugs",
         "04-Archive/Deprecated-Proposals",
-        "05-Reports"
+        "05-Reports",
+        "06-Content"
     )
 
     foreach ($sub in $requiredVaultSubdirs) {

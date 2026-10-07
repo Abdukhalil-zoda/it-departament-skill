@@ -8,6 +8,7 @@ The Coordinator orchestrates specialized roles according to the host platform's 
 *   When the host environment supports autonomous subagents (`invoke_subagent`), the coordinator dispatches tasks to independent subagents.
 *   Each subagent receives an isolated prompt, its role instructions from `agents/<role>.md`, its dedicated worktree path, and its session output directory.
 *   Independent peer review is genuine: the reviewer subagent inspects the diff in isolation without biased memory from the authoring session.
+*   The Content & Localization Reviewer is dispatched twice: at task intake for specifications with `content_review: required`, and on the frozen release candidate in parallel with QA ([`content-review.md`](./content-review.md)).
 
 ### Mode 2: Sequential Execution (Fallback)
 *   If subagents are unavailable or disabled, the coordinator runs roles sequentially within the session.
@@ -37,6 +38,7 @@ Every assignment dispatched by the coordinator must contain these explicit field
 - **Session Output Directory:** {PROJECT_ROOT}/{CONFIGURED_SESSIONS_REL_PATH}/{TASK_ID}/{AGENT_ROLE}/{SESSION_ID}/
 - **Efficiency Budget (R1–R5, from config.json `efficiency.rules`):** builds per fix round ≤ {R1}; screenshots per scenario ≤ {R2} at {R2_SCALE} scale; re-verification scope: fixed defects + one smoke path ({R3}); summaries ≤ {R4_LINES} lines, log tails {R4_TAIL} lines, tool results ≤ {R4_TOKENS} tokens; shared-host queue rules ({R5}).
 - **Usage Export:** before hand-off run `python3 {SKILL_ROOT}/scripts/usage_ledger.py --root {PROJECT_ROOT} --role {AGENT_ROLE} --task {TASK_ID}` (cloud sessions: `--out <staging>` + commit the JSON). See [`efficiency-and-usage-audit.md`](./efficiency-and-usage-audit.md).
+- **Content Review:** `content_review: {required | not-applicable}`; intake verdict `{approved | n/a}` ({link to content-review-intake.md}); user-facing strings are taken verbatim from §6 of the task note for every configured locale and never authored by the developer. See [`content-review.md`](./content-review.md).
 ```
 
 ---

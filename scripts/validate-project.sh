@@ -217,6 +217,46 @@ if (eff === undefined || eff === null) {
     }
 }
 
+// Content review section (Content & Localization Reviewer) - optional, strictly validated when present
+const crv = cfg.content_review;
+if (crv === undefined || crv === null) {
+    console.log("    [WARN] Config has no content_review section: content review uses defaults (source locale en, any locale found, standard resource globs).");
+} else if (typeof crv !== "object" || Array.isArray(crv)) {
+    errors.push("content_review must be an object.");
+} else {
+    if (crv.enabled !== undefined && typeof crv.enabled !== "boolean") errors.push("content_review.enabled must be a boolean.");
+    if (crv.source_locale !== undefined && (typeof crv.source_locale !== "string" || !crv.source_locale.trim())) errors.push("content_review.source_locale must be a non-empty string.");
+    if (crv.locales !== undefined && (!Array.isArray(crv.locales) || crv.locales.length === 0 || crv.locales.some(l => typeof l !== "string" || !l.trim()))) {
+        errors.push("content_review.locales must be a non-empty array of locale codes.");
+    }
+    if (crv.checkpoints !== undefined) {
+        if (!Array.isArray(crv.checkpoints)) errors.push("content_review.checkpoints must be an array.");
+        else for (const cp of crv.checkpoints) { if (cp !== "task-creation" && cp !== "pre-release") errors.push("Invalid content_review.checkpoints entry: " + cp); }
+    }
+    if (crv.block_release_on !== undefined) {
+        const allowedSev = new Set(["Critical", "Major", "Minor", "Trivial"]);
+        if (!Array.isArray(crv.block_release_on)) errors.push("content_review.block_release_on must be an array.");
+        else for (const s of crv.block_release_on) { if (!allowedSev.has(s)) errors.push("Invalid severity in content_review.block_release_on: " + s); }
+    }
+    for (const k of ["glossary_path", "style_guide_path", "reports_path"]) {
+        const val = crv[k];
+        if (val === undefined) continue;
+        if (!val || typeof val !== "string") { errors.push("content_review." + k + " must be a non-empty string"); continue; }
+        if (path.isAbsolute(val)) { errors.push("content_review." + k + " must be relative, got: " + val); continue; }
+        const rel = path.relative(projectRoot, path.resolve(projectRoot, val));
+        if (rel.startsWith("..") || rel === "") errors.push("content_review." + k + " (" + val + ") resolves outside project_root");
+    }
+    for (const k of ["text_sources", "markup_sources", "content_data_sources", "exclude"]) {
+        if (crv[k] !== undefined && !Array.isArray(crv[k])) errors.push("content_review." + k + " must be an array of glob patterns.");
+    }
+    if (crv.inline_tables !== undefined) {
+        if (!Array.isArray(crv.inline_tables)) errors.push("content_review.inline_tables must be an array.");
+        else for (const it of crv.inline_tables) {
+            if (!it || typeof it.path !== "string" || !it.path || !Array.isArray(it.locales) || it.locales.length === 0) errors.push("Each content_review.inline_tables entry needs path and a non-empty locales array.");
+        }
+    }
+}
+
 if (errors.length > 0) {
     console.error(errors.join("\n"));
     process.exit(1);
@@ -344,6 +384,61 @@ else:
             if not rel_skill.startswith(".."):
                 errors.append(f"efficiency.{pkey} ({pval}) resolves inside skill_root: {resolved}")
 
+# Content review section (Content & Localization Reviewer) - optional, strictly validated when present
+crv = cfg.get("content_review")
+if crv is None:
+    print("    [WARN] Config has no content_review section: content review uses defaults (source locale en, any locale found, standard resource globs).")
+elif not isinstance(crv, dict):
+    errors.append("content_review must be an object.")
+else:
+    if "enabled" in crv and not isinstance(crv.get("enabled"), bool):
+        errors.append("content_review.enabled must be a boolean.")
+    if "source_locale" in crv and (not isinstance(crv.get("source_locale"), str) or not crv.get("source_locale").strip()):
+        errors.append("content_review.source_locale must be a non-empty string.")
+    if "locales" in crv:
+        locs = crv.get("locales")
+        if not isinstance(locs, list) or not locs or any((not isinstance(l, str)) or (not l.strip()) for l in locs):
+            errors.append("content_review.locales must be a non-empty array of locale codes.")
+    if "checkpoints" in crv:
+        cps = crv.get("checkpoints")
+        if not isinstance(cps, list):
+            errors.append("content_review.checkpoints must be an array.")
+        else:
+            for cp in cps:
+                if cp not in ("task-creation", "pre-release"):
+                    errors.append("Invalid content_review.checkpoints entry: " + str(cp))
+    if "block_release_on" in crv:
+        bro = crv.get("block_release_on")
+        if not isinstance(bro, list):
+            errors.append("content_review.block_release_on must be an array.")
+        else:
+            for s in bro:
+                if s not in ("Critical", "Major", "Minor", "Trivial"):
+                    errors.append("Invalid severity in content_review.block_release_on: " + str(s))
+    for pkey in ["glossary_path", "style_guide_path", "reports_path"]:
+        if pkey not in crv:
+            continue
+        pval = crv.get(pkey)
+        if not pval or not isinstance(pval, str):
+            errors.append("content_review." + pkey + " must be a non-empty string.")
+        elif os.path.isabs(pval):
+            errors.append("content_review." + pkey + " must be relative, got: " + pval)
+        else:
+            rel = os.path.relpath(os.path.realpath(os.path.join(project_root, pval)), project_root)
+            if rel.startswith("..") or rel == ".":
+                errors.append("content_review." + pkey + " (" + pval + ") resolves outside project_root")
+    for lkey in ["text_sources", "markup_sources", "content_data_sources", "exclude"]:
+        if lkey in crv and not isinstance(crv.get(lkey), list):
+            errors.append("content_review." + lkey + " must be an array of glob patterns.")
+    if "inline_tables" in crv:
+        its = crv.get("inline_tables")
+        if not isinstance(its, list):
+            errors.append("content_review.inline_tables must be an array.")
+        else:
+            for it in its:
+                if not isinstance(it, dict) or not isinstance(it.get("path"), str) or not it.get("path") or not isinstance(it.get("locales"), list) or not it.get("locales"):
+                    errors.append("Each content_review.inline_tables entry needs path and a non-empty locales array.")
+
 if errors:
     print("\n".join(errors), file=sys.stderr)
     sys.exit(1)
@@ -385,7 +480,7 @@ for subdir in \
     "01-Tasks/Backlog" "01-Tasks/In-Analysis" "01-Tasks/Ready-For-Dev" \
     "01-Tasks/In-Development" "01-Tasks/Code-Review" "01-Tasks/QA-Testing" \
     "01-Tasks/Ready-For-Release" "02-Bugs" "03-ADR" \
-    "04-Archive/Completed-Tasks" "04-Archive/Resolved-Bugs" "04-Archive/Deprecated-Proposals" "05-Reports"; do
+    "04-Archive/Completed-Tasks" "04-Archive/Resolved-Bugs" "04-Archive/Deprecated-Proposals" "05-Reports" "06-Content"; do
     if [ ! -d "$RESOLVED_VAULT/$subdir" ]; then
         echo "Error: Missing vault subdirectory: $RESOLVED_VAULT/$subdir (re-run init-project to add folders introduced by newer skill versions)" >&2
         exit 1

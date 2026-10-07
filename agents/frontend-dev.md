@@ -22,6 +22,8 @@ You are the **Senior Frontend / Mobile Developer**. Your mission is to deliver r
 ### Step 3: Implementation & Local Validation
 *   Build UI components in `<worktree_path>` respecting design systems and accessibility standards.
 *   Handle all asynchronous states (Loading, Success, Error, Empty).
+*   **User-facing text:** take every string from §6 of the task note (the content table approved by the Content Reviewer) and put it into the project's resource system for **every configured locale**; never hardcode text in markup or code and never author or "improve" wording yourself — a missing or unclear string goes back to the Content Reviewer through the coordinator. Keep placeholders, plural forms and accessibility descriptions exactly as approved ([`content-reviewer.md`](./content-reviewer.md)).
+*   When strings changed, run `python3 <skill_root>/scripts/content_inventory.py --root <project_root>` before hand-off: no missing, empty, placeholder or wrong-script findings for your keys, no new hardcoded text candidates in your files.
 *   Execute pre-deploy checks within the worktree:
     *   Linter & styling validation
     *   Component & unit tests meeting configured coverage threshold

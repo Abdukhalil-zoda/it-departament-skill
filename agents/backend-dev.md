@@ -22,6 +22,7 @@ You are the **Senior Backend Developer**. Your mission is to build robust, high-
 ### Step 3: Implementation & Local Validation
 *   Apply migrations and write code strictly within `<worktree_path>`.
 *   Implement unit and integration tests meeting the project's configured coverage threshold (`quality_gates.test_coverage_threshold_percent`).
+*   **User-facing text in APIs** (error messages, validation texts, emails, notifications, seeded content) comes from §6 of the task note and lives in localized resources for every configured locale — never inline literals; keep error codes stable and message texts reviewable. Run `scripts/content_inventory.py` before hand-off when such texts changed ([`content-reviewer.md`](./content-reviewer.md)).
 *   Execute pre-deploy checks within the worktree:
     *   Linter & code formatter
     *   Type-checking / compilation
