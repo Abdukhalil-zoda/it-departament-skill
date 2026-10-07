@@ -7,6 +7,15 @@
     "VIRTUAL": "Virtual CTO acts as technical interface and delivery coordinator; shields user from technical trivia.",
     "USER": "User acts as CTO; coordinator presents concrete technical proposals, ADRs, and release candidates for direct user decision."
   },
+  "operating_profile": "pilot",
+  "profile_review": {
+    "active_users": 0,
+    "payments_live": false,
+    "sla_promised": false,
+    "regulated_data": false,
+    "reviewed_at": "{YYYY-MM-DD}",
+    "note": "Why this profile; what would trigger the next one"
+  },
   "delegated_authorities": {
     "allow_merge_integration": true,
     "allow_merge_production": false,
@@ -45,6 +54,12 @@
     "test_secrets_agent_managed": true,
     "commit_real_credentials": false
   },
+  "documents": [
+    {
+      "title": "Product specification",
+      "path": "docs/requirements/spec.md"
+    }
+  ],
   "efficiency": {
     "audit_interval_days": 2,
     "audit_model": "claude-fable-5-1",
