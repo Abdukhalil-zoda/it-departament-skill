@@ -1,5 +1,16 @@
 # Workflow Guide: Review, QA Verification & Immutable Release Management
 
+## 0. Gate Depth by Operating Profile
+
+This guide describes the `production` profile. The operating profile in `config.json` sets how much of it applies (normative matrix: [`operating-profiles.md`](./operating-profiles.md) §2):
+*   **`production`:** everything below as written: staging, immutable candidate SHA, full suite once per candidate SHA (R3), QA and content verdicts on the same SHA, CTO gate, full rollback plan, hotfix per §3.2.
+*   **`pilot`:** no staging required (production with a backup may serve as the test environment); QA covers the fixed defects plus one smoke path per feature, the full suite runs once before the first wide release and then once per candidate SHA that touches shared flows; deploy after the QA smoke and the content verdict, **DB backup first** (Step 5), rollback = restore the backup or redeploy the previous artifact, 15-minute watch; hotfix = commit on integration, deploy, backfill the task note, plus a QA smoke.
+*   **`prototype`:** QA is the smoke path of the changed feature; deploy directly from the integration branch after the smoke, **DB backup first**; hotfix = commit on integration, deploy, backfill the task note.
+
+The floors hold in every profile: `delegated_authorities` (a direct deploy still needs `allow_deploy_production` or the user's go-ahead), a verified backup before destructive operations and migrations, no force-push.
+
+---
+
 ## 1. The Principle of the Immutable Release Candidate
 
 A software release cannot be approved simply because individual sprint tickets are marked "Ready." Software systems fail at integration boundaries when multiple changes interact unexpectedly.
@@ -52,6 +63,8 @@ QA test results, security scan outputs, and reviewer approvals are recorded agai
 *   `Test Execution: PASS (Candidate: $RELEASE_CANDIDATE_SHA, Tests: 184 passed, 0 failed)`
 *   `Defect Audit: PASS (0 Critical, 0 Major defects open)`
 
+QA writes its evidence as `qa-report.md` from [`templates/qa-report.md`](../templates/qa-report.md) (`qa_scope: smoke | targeted | full` per §0) in its session directory; the release-level copy `<vault>/05-Reports/qa-report-<date>-<sha7>.md` is what the dashboard's release table links as "Verified By".
+
 *Efficiency rule R3 (targeted re-verification):* the full regression and scenario suite runs **once per candidate SHA**. After a fix round QA re-verifies only the fixed defects plus one smoke path; a new full run is owed only when the candidate SHA changes (Step 4). Screenshot evidence follows the R2 budget (see [`efficiency-and-usage-audit.md`](./efficiency-and-usage-audit.md)).
 
 ### Step 3b: Content & Localization Review of the Candidate (parallel to QA)
@@ -77,6 +90,8 @@ Once authorized in accordance with `delegated_authorities` and CTO sign-off (QA 
     git -C "<repository_root>" tag -a "vX.Y.Z" -m "Release vX.Y.Z (SHA: $RELEASE_CANDIDATE_SHA)"
     ```
 3.  Monitor production health and error metrics for 15 minutes post-deployment.
+
+*`pilot` / `prototype` (§0):* the DB backup is taken first and its name (dump file, volume snapshot or export id) is recorded in the session note **before** step 1; the way back is a restore of that backup or a redeploy of the previous artifact.
 
 ### Step 6: Post-Deploy Archival
 Only **after** deployment success is verified:
@@ -117,7 +132,7 @@ If a production deployment fails or causes severe regressions:
     *   If the project has no automated rollback mechanism, the coordinator immediately records a blocker note and escalates to the CTO and human user with a concrete incident summary.
 
 ### 3.2 Emergency Production Hotfix Flow
-When a critical vulnerability or production crash requires an immediate patch:
+This is the `production` hotfix; `prototype` and `pilot` use the short form in §0. When a critical vulnerability or production crash requires an immediate patch:
 1.  **Worktree from Production:**
     ```bash
     git -C "<repository_root>" worktree add -b "hotfix/{task-id}/{dd.mm.yyyy}/dev-backend" \

@@ -16,8 +16,10 @@ The entry point for the host is [`SKILL.md`](./SKILL.md). This file is the human
 | **Roles** | `agents/*.md` — one system prompt per role (CTO, System Analyst, Architect, Backend / Frontend developers, QA, DevOps, Content & Localization Reviewer) with step-by-step SOPs and session-output contracts. |
 | **Content & localization review** | Two checkpoints: every user-facing string finalized in every locale before development, and all texts of the release candidate reviewed before the CTO gate, with an inventory script, glossary, style guide and a report to the CTO. |
 | **Delivery pipeline** | Ready-For-Dev → worktree → tests (≥ 80 % coverage) → CI → peer review → integration merge → QA on an immutable candidate SHA → CTO release gate → production → archive. |
+| **Operating profiles** | `prototype` / `pilot` / `production` in `config.json` sets the depth of every gate (route, Definition of Ready, review, coverage, QA scope, staging, deploy), so a product with five users is not run like one with an SLA; in early profiles "back up the database and work directly in production" is a documented path. Floors never move: secrets out of git, verified backups, no force-push, delegated authorities. |
 | **Safety rails** | Delegated authorities in `config.json`, mock vs real secrets rules, non-destructive rollback (redeploy, never force-push), incident triage classes. |
-| **Vault** | Project-local Obsidian vault (`vault/`) with kanban folders, bugs, ADRs, usage-audit reports and a zero-deletion archive. |
+| **Vault** | Project-local Obsidian vault (`vault/`) with kanban folders, bugs, ADRs, a decisions journal, usage-audit, content and QA reports, and a zero-deletion archive. |
+| **Session protocol & dashboard automation** | A hand-written lock file and hand-off notes let a Cowork orchestrator, local CLI sessions and scheduled routines share one vault. The dashboard is generated (every ID, report and document clickable; token and audit status on top), transition requests are applied by a script, and a vault lint catches structural drift. |
 | **Token optimizer** | Efficiency rules R1–R5, a per-session usage ledger, a scheduled usage audit with ≤ 5 proposals for the CTO. |
 
 ## Package layout
@@ -29,23 +31,30 @@ agents/                       role prompts (cto, system-analyst, architect, back
                               devops-engineer, content-reviewer)
 workflows/                    runbooks: orchestration & worktrees, git branching, review/QA/release, CTO authority,
                               deep reasoning & override, lightweight vs full routes, secrets & incidents,
-                              efficiency & usage audit (token optimizer), content review (two checkpoints)
-templates/                    task specification, bug/defect, ADR, usage-audit prompt, content-review report
-references/                   canonical contracts & lifecycle, MCP integration, worked example (SHOP-102)
+                              efficiency & usage audit (token optimizer), content review (two checkpoints),
+                              operating profiles, session protocol (lock & hand-off)
+templates/                    task specification, bug/defect, ADR, decision record, QA report, usage-audit prompt,
+                              content-review report
+references/                   canonical contracts & lifecycle, Definition of Ready / Done, MCP integration,
+                              worked example (SHOP-102)
 assets/                       config-template.json, project-config.schema.json, vault-template/
 scripts/                      init-project.{ps1,sh}, validate-project.{ps1,sh},
-                              usage_ledger.py, usage_report.py, schedule-usage-audit.{ps1,sh}, content_inventory.py
+                              usage_ledger.py, usage_report.py, schedule-usage-audit.{ps1,sh}, content_inventory.py,
+                              dashboard_sync.py, apply_transitions.py, vault_lint.py (unit tests in scripts/tests/)
 ```
 
 The package is stateless. All project data lives in the target project:
 
 ```text
 <project_root>/
-├── vault/                    00-Dashboard.md, 01-Tasks/<status>/, 02-Bugs/, 03-ADR/, 04-Archive/, 05-Reports/,
-│                             06-Content/ (glossary, style guide)
+├── vault/                    00-Dashboard.md (generated), 01-Tasks/<status>/, 02-Bugs/, 03-ADR/ (+ decisions-log.md),
+│                             04-Archive/, 05-Reports/, 06-Content/ (glossary, style guide)
 └── .it-department/
-    ├── config.json           modes, delegated authorities, git policy, quality gates, paths, efficiency rules, content review
-    ├── sessions/             <task-id>/<role>/<session-id>/ work records; _usage/ledger/ usage ledger
+    ├── config.json           modes, operating profile, delegated authorities, git policy, quality gates, paths,
+    │                         documents, efficiency rules, content review
+    ├── lock.json             session lock while a writer is active (written by hand, git-ignored)
+    ├── sessions/             <task-id>/<role>/<session-id>/ work records; _handoff/ hand-off notes;
+    │                         _usage/ledger/ usage ledger
     ├── worktrees/            isolated git worktrees per task
     └── jobs/                 optional machine-time feed (job logs or jobs.jsonl)
 ```
@@ -63,17 +72,20 @@ The package is stateless. All project data lives in the target project:
     ```bash
     <skill_root>/scripts/init-project.sh <project_root>
     ```
-3.  **Adjust `<project_root>/.it-department/config.json`**: `cto_mode` (`VIRTUAL` or `USER`), delegated
-    authorities, branch names, quality gates, efficiency limits.
+3.  **Adjust `<project_root>/.it-department/config.json`**: `cto_mode` (`VIRTUAL` or `USER`), the operating
+    profile (`operating_profile` and the `profile_review` facts; the template starts at `pilot`), delegated
+    authorities, branch names, quality gates, efficiency limits, the `documents` shown on the dashboard.
 4.  **Validate** at any time:
     ```powershell
     pwsh -File <skill_root>/scripts/validate-project.ps1 -ProjectRoot <project_root>
     ```
-5.  **Work.** Describe a goal to the host. The coordinator scores it, routes it (lightweight or full), writes
-    the task note, dispatches roles (sub-agents when the host supports them, sequential otherwise), and
-    keeps the vault and dashboard current.
+5.  **Work.** Describe a goal to the host. The coordinator scores it, routes it (lightweight or full) at the
+    depth of the operating profile, writes the task note, dispatches roles (sub-agents when the host supports
+    them, sequential otherwise), and keeps the vault and dashboard current. Concurrent sessions follow the
+    session protocol (`workflows/session-protocol.md`).
 
-Requirements: PowerShell 7 or bash, git, Python 3.8+ (standard library only) for the usage scripts.
+Requirements: PowerShell 7 or bash, git, Python 3.8+ (standard library only) for the usage, dashboard,
+transition and lint scripts.
 
 ## Token optimizer (efficiency rules & usage audit)
 
@@ -130,6 +142,7 @@ Full guide: [`workflows/content-review.md`](./workflows/content-review.md).
 ## Where to read next
 
 *   [`SKILL.md`](./SKILL.md) — operating model, modes, the advisory lifecycle, the delivery pipeline.
+*   [`workflows/operating-profiles.md`](./workflows/operating-profiles.md) — which gates apply at which stage of the product.
 *   [`references/contracts-and-lifecycle.md`](./references/contracts-and-lifecycle.md) — statuses, severities, path contracts, single-writer rule.
 *   [`workflows/`](./workflows/) — the runbooks the coordinator follows.
 *   [`references/examples/SHOP-102.md`](./references/examples/SHOP-102.md) — a fully specified example task (never copied into real projects).

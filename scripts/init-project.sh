@@ -67,6 +67,11 @@ is_same_or_inside() {
     esac
 }
 
+# Escape a value for the replacement part of a sed s/// command (backslash, ampersand and the / delimiter)
+sed_escape() {
+    printf '%s' "$1" | sed -e 's/[\\/&]/\\&/g'
+}
+
 if is_same_or_inside "$PROJECT_ROOT" "$SKILL_ROOT"; then
     echo "Error: Project root ('$PROJECT_ROOT') cannot be equal to or inside skill root ('$SKILL_ROOT')." >&2
     exit 1
@@ -202,6 +207,15 @@ echo "    Skill Root:   $SKILL_ROOT"
 
 # --- 4. Mutate Filesystem Safely & Idempotently ---
 mkdir -p "$PROJECT_RUNTIME_DIR" "$RESOLVED_SESSIONS_DIR" "$RESOLVED_WORKTREES_DIR" "$RESOLVED_VAULT_DIR" "$RESOLVED_LEDGER_DIR"
+TODAY="$(date +%Y-%m-%d)"
+
+# Runtime data shared through the project folder but never committed (lock, worktrees, raw usage, dated hand-offs)
+if [ ! -f "$PROJECT_RUNTIME_DIR/.gitignore" ]; then
+    printf '%s\n' \
+        "lock.json" "worktrees/" \
+        "sessions/_usage/raw/" "sessions/_usage/audit-runs/" "sessions/_usage/audit-prompt.generated.md" \
+        'sessions/_handoff/*' '!sessions/_handoff/latest.md' > "$PROJECT_RUNTIME_DIR/.gitignore"
+fi
 
 # Token optimizer: keep ledger/*.json (aggregates only); ignore raw transcript copies and audit runs
 if [ ! -f "$RESOLVED_USAGE_DIR/.gitignore" ]; then
@@ -216,24 +230,33 @@ fi
 
 if [ ! -f "$PROJECT_CONFIG_PATH" ]; then
     echo "    Creating .it-department/config.json using structured $JSON_ENGINE serialization..."
+    # project_name from the folder (or argument); a templated profile_review.reviewed_at ({YYYY-MM-DD}) becomes today
     if [ "$JSON_ENGINE" = "python3" ] || [ "$JSON_ENGINE" = "python" ]; then
         $JSON_ENGINE -c '
 import json, sys
 with open(sys.argv[1], "r", encoding="utf-8") as f:
     cfg = json.load(f)
 cfg["project_name"] = sys.argv[2]
+review = cfg.get("profile_review")
+if isinstance(review, dict) and review.get("reviewed_at") == "{YYYY-MM-DD}":
+    review["reviewed_at"] = sys.argv[4]
 with open(sys.argv[3], "w", encoding="utf-8") as f:
     json.dump(cfg, f, indent=2, ensure_ascii=False)
-' "$CONFIG_TEMPLATE_PATH" "$PROJECT_NAME_INPUT" "$PROJECT_CONFIG_PATH"
+' "$CONFIG_TEMPLATE_PATH" "$PROJECT_NAME_INPUT" "$PROJECT_CONFIG_PATH" "$TODAY"
     elif [ "$JSON_ENGINE" = "node" ]; then
         node -e '
 const fs = require("fs");
 const cfg = JSON.parse(fs.readFileSync(process.argv[1], "utf8"));
 cfg.project_name = process.argv[2];
+const review = cfg.profile_review;
+if (review && typeof review === "object" && !Array.isArray(review) && review.reviewed_at === "{YYYY-MM-DD}") review.reviewed_at = process.argv[4];
 fs.writeFileSync(process.argv[3], JSON.stringify(cfg, null, 2), "utf8");
-' "$CONFIG_TEMPLATE_PATH" "$PROJECT_NAME_INPUT" "$PROJECT_CONFIG_PATH"
+' "$CONFIG_TEMPLATE_PATH" "$PROJECT_NAME_INPUT" "$PROJECT_CONFIG_PATH" "$TODAY"
     elif [ "$JSON_ENGINE" = "jq" ]; then
-        jq --arg name "$PROJECT_NAME_INPUT" '.project_name = $name' "$CONFIG_TEMPLATE_PATH" > "$PROJECT_CONFIG_PATH"
+        jq --arg name "$PROJECT_NAME_INPUT" --arg today "$TODAY" '.project_name = $name
+            | if (.profile_review | type) == "object" then
+                  (if .profile_review.reviewed_at == "{YYYY-MM-DD}" then .profile_review.reviewed_at = $today else . end)
+              else . end' "$CONFIG_TEMPLATE_PATH" > "$PROJECT_CONFIG_PATH"
     fi
 else
     echo "    Preserving existing .it-department/config.json."
@@ -254,14 +277,19 @@ find "$VAULT_TEMPLATE_DIR" -type f | while read -r src_file; do
     if [ ! -f "$target_file" ]; then
         if [ "$(basename "$src_file")" = "00-Dashboard.md" ]; then
             CURRENT_DATE=$(date +%Y-%m-%d)
-            sed -e "s/{PROJECT_NAME}/$PROJECT_NAME_EFFECTIVE/g" \
+            sed -e "s/{PROJECT_NAME}/$(sed_escape "$PROJECT_NAME_EFFECTIVE")/g" \
                 -e "s/{LAST_UPDATED}/$CURRENT_DATE/g" \
-                -e "s/{CTO_MODE}/$CTO_MODE_EFFECTIVE/g" \
+                -e "s/{CTO_MODE}/$(sed_escape "$CTO_MODE_EFFECTIVE")/g" \
                 "$src_file" > "$target_file"
         elif [ "${rel_file#/06-Content/}" != "$rel_file" ]; then
             CURRENT_DATE=$(date +%Y-%m-%d)
-            sed -e "s/{SOURCE_LOCALE}/$CONTENT_SOURCE_LOCALE/g" \
-                -e "s/{LOCALES}/$CONTENT_LOCALES/g" \
+            sed -e "s/{SOURCE_LOCALE}/$(sed_escape "$CONTENT_SOURCE_LOCALE")/g" \
+                -e "s/{LOCALES}/$(sed_escape "$CONTENT_LOCALES")/g" \
+                -e "s/{DATE}/$CURRENT_DATE/g" \
+                "$src_file" > "$target_file"
+        elif [ "$rel_file" = "/03-ADR/decisions-log.md" ]; then
+            CURRENT_DATE=$(date +%Y-%m-%d)
+            sed -e "s/{PROJECT_NAME}/$(sed_escape "$PROJECT_NAME_EFFECTIVE")/g" \
                 -e "s/{DATE}/$CURRENT_DATE/g" \
                 "$src_file" > "$target_file"
         else
@@ -275,6 +303,31 @@ echo "    Vault:     $RESOLVED_VAULT_DIR"
 echo "    Sessions:  $RESOLVED_SESSIONS_DIR"
 echo "    Worktrees: $RESOLVED_WORKTREES_DIR"
 echo "    Ledger:    $RESOLVED_LEDGER_DIR"
+
+# Active operating profile (workflows/operating-profiles.md); a config without operating_profile runs as production
+PROFILE_EFFECTIVE=""
+if [ "$JSON_ENGINE" = "python3" ] || [ "$JSON_ENGINE" = "python" ]; then
+    PROFILE_EFFECTIVE=$($JSON_ENGINE -c '
+import json, sys
+with open(sys.argv[1], "r", encoding="utf-8") as f:
+    cfg = json.load(f)
+profile = cfg.get("operating_profile")
+print(profile if isinstance(profile, str) else "")
+' "$PROJECT_CONFIG_PATH") || PROFILE_EFFECTIVE=""
+elif [ "$JSON_ENGINE" = "node" ]; then
+    PROFILE_EFFECTIVE=$(node -e '
+const fs = require("fs");
+const cfg = JSON.parse(fs.readFileSync(process.argv[1], "utf8"));
+console.log(typeof cfg.operating_profile === "string" ? cfg.operating_profile : "");
+' "$PROJECT_CONFIG_PATH") || PROFILE_EFFECTIVE=""
+elif [ "$JSON_ENGINE" = "jq" ]; then
+    PROFILE_EFFECTIVE=$(jq -r 'if (.operating_profile | type) == "string" then .operating_profile else "" end' "$PROJECT_CONFIG_PATH") || PROFILE_EFFECTIVE=""
+fi
+if [ -n "$PROFILE_EFFECTIVE" ]; then
+    echo "    Profile:   $PROFILE_EFFECTIVE (workflows/operating-profiles.md)"
+else
+    echo "    Profile:   production (config.json has no operating_profile; workflows/operating-profiles.md)"
+fi
 if [ "$HAS_EFFICIENCY" != "yes" ]; then
     echo "    [HINT] config.json has no 'efficiency' block: the token optimizer uses default limits and paths. Copy the block from '$CONFIG_TEMPLATE_PATH' to tune rules R1-R5 and the audit interval."
 fi

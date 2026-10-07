@@ -34,7 +34,8 @@ Three parts, all project-local and host-agnostic:
 The limits are **project policy owned by the CTO** ([`agents/cto.md`](../agents/cto.md)): the coordinator reads
 them from `config.json`, copies the relevant ones into every Task Assignment Contract
 ([`orchestration-and-worktrees.md`](./orchestration-and-worktrees.md) §2) and the role files repeat them for
-each agent. Changing a limit is a CTO decision recorded in the decisions journal or an ADR.
+each agent. Changing a limit is a CTO decision recorded in the decisions journal
+(`<vault>/03-ADR/decisions-log.md`) or an ADR.
 
 ---
 
@@ -118,7 +119,8 @@ The auditor is a separate session of the strongest model (`efficiency.audit_mode
     the ledger on them, delete the raw copies. If the host is unreachable, work with the committed ledger
     and say so in the report.
 2.  **Generate the numbers.** `python3 <skill_root>/scripts/usage_report.py --root <project_root>` writes
-    `{reports_path}/usage-audit-<date>.md` (+ a `.json` sidecar with the totals). `--since` defaults to the
+    `{reports_path}/usage-audit-<date>.md` (+ a `.json` sidecar with the totals; never pass `--no-json` for a real
+    audit — the dashboard's token block and the next delta read the sidecar). `--since` defaults to the
     date of the previous report; sections 1–5 are deterministic: tokens by session / role / model / content
     group, largest tool results, machine time by role / kind / task, queue waits and dev/QA overlaps,
     screenshots per folder, **rule indicators R1–R5 against the configured limits**, and the delta against
@@ -128,14 +130,25 @@ The auditor is a separate session of the strongest model (`efficiency.audit_mode
     proposals**, each with evidence (numbers), expected saving (tokens or minutes), where it is applied
     (`config.json` rule, agent file, tool default, task brief) and its risk. No proposal is applied by the
     auditor. If the window has no ledger files, the first proposal names the sessions that did not export.
-4.  **Record.** Add a row to the "Usage Audits" table of `<vault>/00-Dashboard.md` (wikilink
-    `[[usage-audit-<date>]]`, window, highlights) and commit report + dashboard on the integration branch
-    (`vault: usage audit <date>`). The audit session writes only `{reports_path}/` and that dashboard
-    table — it never moves task notes (single-writer rule stays with the coordinator).
+    The `Decision` column of section 7 stays empty: the dashboard counts a proposal as pending until the
+    CTO's decision is mirrored there (step 6).
+4.  **Record.** Commit the report and its sidecar on the integration branch (`vault: usage audit <date>`).
+    The dashboard's token block (last audit, delta, R1–R5 status, proposals pending a CTO decision, next
+    audit due) and its "Usage Audits" row are generated from the sidecar and the report by
+    `scripts/dashboard_sync.py`, so the auditor never edits the dashboard: its row reaches the dashboard via
+    the coordinator, who runs the sync as lock holder ([`session-protocol.md`](./session-protocol.md)). The
+    audit session writes only `{reports_path}/` and its own ledger file; it never moves task notes
+    (single-writer rule).
 5.  **Export its own usage** (`usage_ledger.py`); the auditor is measured too.
 6.  **Report to the CTO** in ≤ 15 lines: what grew, what shrank, the proposals one line each, and the
-    question which ones to approve. CTO decisions go into the decisions journal or an ADR, then the
-    coordinator applies them to the skill files, `config.json` or task briefs; the next audit reports the delta.
+    question which ones to approve. CTO decisions go into the decisions journal
+    (`<vault>/03-ADR/decisions-log.md`, one `D-NNN` row each, format in
+    [`templates/decision-record.md`](../templates/decision-record.md)), or into an ADR when the change is
+    architectural, and are mirrored in the report's `Decision` column (`approved D-NNN`, `rejected D-NNN`,
+    `amended D-NNN`). The coordinator then applies the approved ones to the skill files, `config.json` or task
+    briefs; the next audit reports the delta. In the `prototype` and `pilot` profiles a proposal that only
+    changes tool defaults may be applied by the coordinator without a decision note; its `Decision` cell then
+    reads `applied: tool default` ([`operating-profiles.md`](./operating-profiles.md)).
 
 Auditor rules: numbers only from the scripts and files (no estimates "by eye"); never read screenshots or
 whole transcripts, only aggregates; keep its own spend minimal.

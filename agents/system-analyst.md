@@ -31,6 +31,7 @@ Before authoring a specification:
 ### 2.3 Sizing the Route
 *   **Lightweight Route:** For small, narrow changes (UI tweaks, typos, copy updates, isolated bugfixes, docs), author a streamlined task directly into `<project_root>/vault/01-Tasks/Ready-For-Dev/`. Database and endpoint sections may be explicitly marked *"Not applicable."*
 *   **Full Route:** For substantial features, migrations, or architectural additions, place the task in `<project_root>/vault/01-Tasks/In-Analysis/` and satisfy the complete **Definition of Ready (DoR)** before advancing to `Ready-For-Dev`. Use `references/examples/SHOP-102.md` as the depth reference.
+*   **Depth by operating profile** (the brief's `Profile & Gates` field, [`workflows/operating-profiles.md`](../workflows/operating-profiles.md)): `prototype` — everything lightweight unless schema or auth is touched; the DoR is context + acceptance criteria + content table. `pilot` — lightweight by default, full route for schema, auth, payments and data migration; full template, DB/API sections may be *"Not applicable"* with one sentence why. `production` — as above, full template. Checklists item by item: [`references/definition-of-ready-done.md`](../references/definition-of-ready-done.md).
 
 ---
 

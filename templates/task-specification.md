@@ -11,6 +11,7 @@ branch: "feature/{TASK-ID}/{DD.MM.YYYY}/{AGENT}"
 date_created: "{YYYY-MM-DD}"
 date_updated: "{YYYY-MM-DD}"
 pr_link: ""
+docs: [] # related documents outside the vault, e.g. ["docs/requirements/spec.md"]
 qa_status: pending # pending | testing | passed | failed
 content_review: required # required (task adds or changes any user-facing text, localized resource or shipped content) | not-applicable
 content_review_intake: pending # pending | approved | changes-requested | not-applicable  (set by the coordinator from the Content Reviewer's verdict)
@@ -114,3 +115,6 @@ Header: `{Header-Name}: {Header-Value}`
 ## 9. Dependencies & Blockers
 - Depends on: [[{ANOTHER-TASK-ID}]] (or None)
 - Blocks: [[{FUTURE-TASK-ID}]] (or None)
+
+## 10. Transition Log
+- {YYYY-MM-DDTHH:MM:SSZ} In-Analysis → Ready-For-Dev by coordinator (evidence: …)

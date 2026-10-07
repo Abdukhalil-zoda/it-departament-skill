@@ -23,6 +23,8 @@ Configuration: the `content_review` block of `<project_root>/.it-department/conf
 
 **Trigger:** the System Analyst finishes a specification with `content_review: required` in its frontmatter (any task that adds or changes user-facing text, localized resources or shipped content), before the task can enter `Ready-For-Dev`. Lightweight-route tasks get the same pass in short form.
 
+**Depth by operating profile** ([`workflows/operating-profiles.md`](../workflows/operating-profiles.md)): short form in `prototype`; the full steps below in `pilot` (short form allowed for lightweight tasks) and `production`.
+
 **Steps:**
 1.  Read §1 Context, §6 *User-Facing Content & Localization* (the strings table), §7 Acceptance Criteria of the task note; open the glossary and style guide.
 2.  Check the strings table: every string has a key or location, a context (screen, when it appears), a value for **every configured locale**, placeholders with the same meaning in all locales, a length limit where the UI constrains it, and plural/gender variants where the language needs them.
@@ -40,6 +42,8 @@ Configuration: the `content_review` block of `<project_root>/.it-department/conf
 
 **Trigger:** the coordinator freezes the release candidate SHA ([`workflows/review-qa-and-release.md`](../workflows/review-qa-and-release.md), Step 1). You review the candidate **in parallel with QA on the same SHA**; your sign-off is part of the CTO release gate.
 
+**Depth by operating profile:** `prototype` — only the strings changed since the baseline (inventory section 3); `pilot` — the steps below, short form allowed for lightweight tasks; `production` — the steps below in full.
+
 **Steps:**
 1.  Run the inventory on the candidate:
     `python3 <skill_root>/scripts/content_inventory.py --root <project_root> --base <production_baseline_sha> --out <vault>/05-Reports/content-inventory-<date>-<sha7>.md` (`python` on Windows). It lists every string added or changed since the last release, missing or empty keys, placeholder mismatches, wrong writing systems, hardcoded markup text and wrong-language data content.
@@ -51,7 +55,7 @@ Configuration: the `content_review` block of `<project_root>/.it-department/conf
     *   `approved` — no open findings above the deferrable level;
     *   `approved-with-deferrals` — only `Minor`/`Trivial` left and the CTO signed the deferrals;
     *   `blocked` — at least one `Critical`/`Major` content defect open (`content_review.block_release_on`).
-7.  Add a row to the "Content & Localization Reviews" table of `<vault>/00-Dashboard.md` through the coordinator (single-writer rule) and attach the verdict to the candidate SHA as release evidence.
+7.  Attach the verdict to the candidate SHA as release evidence. The "Content & Localization Reviews" row of `<vault>/00-Dashboard.md` is generated from the report's frontmatter by `scripts/dashboard_sync.py`, which the coordinator runs (single-writer rule): never edit the dashboard yourself.
 8.  **Send the CTO a report of at most 15 lines:** candidate SHA, locales reviewed and your confidence per locale, counts by severity, the top findings in one line each, the verdict, and the question which deferrals to sign. In `cto_mode: "VIRTUAL"` the Virtual CTO receives it and reports the user-visible risk to the Business Owner.
 
 ---

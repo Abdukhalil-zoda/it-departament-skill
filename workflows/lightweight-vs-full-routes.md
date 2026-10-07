@@ -4,6 +4,8 @@
 
 Not every engineering change requires multi-role deliberation, schema migrations, and Architecture Decision Records. Imposing enterprise overhead on a one-line typo fix wastes time, while rushing a database migration risks data corruption.
 
+The operating profile ([`operating-profiles.md`](./operating-profiles.md)) moves the boundary between the two routes: `prototype` sends everything down the lightweight route unless schema or auth is touched, `pilot` defaults to lightweight and keeps the full route for schema, auth, payments and data migration, and `production` triages as described below.
+
 The IT Department skill defines two distinct delivery routes:
 
 ```mermaid
@@ -37,6 +39,7 @@ flowchart TD
 | Aspect | Lightweight Route | Full Route |
 | :--- | :--- | :--- |
 | **Typical Changes** | Text/copy edits, CSS/UI tweaks, single-file bugfixes, internal utility updates, documentation. | New business features, multi-service integrations, database schema modifications, financial logic, public API additions. |
+| **Operating Profile** | `prototype`: the default for everything that touches neither schema nor auth. `pilot`: the default route. `production`: the typical changes above. | `prototype`: only when schema or auth is touched. `pilot`: schema, auth, payments, data migration. `production`: the typical changes above. |
 | **Analysis Phase** | Streamlined. Developer or analyst writes brief spec directly into `Ready-For-Dev`. | Comprehensive. Enters `In-Analysis`; passes formal Definition of Ready checklist. |
 | **Database & API Spec** | Marked *"Not applicable"* if no tables or endpoints are touched. | Mandatory explicit tables, column types, SQL migrations, route tables, and JSON contracts. |
 | **Content Review** | Short-form intake pass on the strings table whenever user-facing text changes (a copy edit *is* a content change); the pre-release review covers the change. | Mandatory intake review of §6 of the spec before `Ready-For-Dev`; pre-release review of every text of the candidate. Guide: [`content-review.md`](./content-review.md). |

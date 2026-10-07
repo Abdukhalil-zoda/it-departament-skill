@@ -42,6 +42,24 @@
         "type": "string"
       }
     },
+    "operating_profile": {
+      "type": "string",
+      "enum": ["prototype", "pilot", "production"],
+      "description": "Operating profile that sets the depth of every gate (workflows/operating-profiles.md). Owned by the CTO. Optional; absent = production."
+    },
+    "profile_review": {
+      "type": "object",
+      "description": "Facts behind the operating profile, re-checked by the coordinator at project init, when they change and at every release gate (workflows/operating-profiles.md). All fields optional.",
+      "additionalProperties": false,
+      "properties": {
+        "active_users": { "type": "integer", "minimum": 0, "description": "Real active users today; above the CTO's pilot threshold (default 50) the project is production." },
+        "payments_live": { "type": "boolean", "description": "Live payments are processed; true means production." },
+        "sla_promised": { "type": "boolean", "description": "An SLA or uptime commitment was given to users or customers; true means production." },
+        "regulated_data": { "type": "boolean", "description": "Data under specific regulation is processed (e.g. health records, card data); true means production." },
+        "reviewed_at": { "type": "string", "description": "Date of the last review of these facts (YYYY-MM-DD)." },
+        "note": { "type": "string", "description": "Why this profile; what would trigger the next one." }
+      }
+    },
     "delegated_authorities": {
       "type": "object",
       "required": [
@@ -157,6 +175,19 @@
         "production_secrets_agent_access": { "type": "boolean" },
         "test_secrets_agent_managed": { "type": "boolean" },
         "commit_real_credentials": { "type": "boolean" }
+      }
+    },
+    "documents": {
+      "type": "array",
+      "description": "Project documents listed in the dashboard's Documents block (scripts/dashboard_sync.py); paths are relative to the project root, inside or outside the vault.",
+      "items": {
+        "type": "object",
+        "required": ["title", "path"],
+        "additionalProperties": false,
+        "properties": {
+          "title": { "type": "string", "minLength": 1 },
+          "path": { "type": "string", "minLength": 1 }
+        }
       }
     },
     "efficiency": {
