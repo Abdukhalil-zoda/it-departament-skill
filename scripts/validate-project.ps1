@@ -81,6 +81,31 @@ function Test-IsSameOrInside([string]$Child, [string]$Parent) {
     return $true
 }
 
+# Python 3.8+ for scripts/vault_lint.py. The Microsoft Store "python" alias is a stub that exits non-zero with
+# "Python was not found", so a candidate counts only when "--version" exits 0 and reports Python 3.8 or newer.
+function Find-Python {
+    foreach ($candidate in @(@('python'), @('python3'), @('py', '-3'))) {
+        if (-not (Get-Command $candidate[0] -CommandType Application -ErrorAction SilentlyContinue)) { continue }
+        $extraArgs = @($candidate | Select-Object -Skip 1)
+        $previousPreference = $ErrorActionPreference
+        $versionText = ''
+        $exitCode = 1
+        try {
+            $ErrorActionPreference = 'Continue'
+            $versionText = (& $candidate[0] @extraArgs --version 2>&1 | ForEach-Object { "$_" }) -join ' '
+            $exitCode = $LASTEXITCODE
+        } catch {
+            $exitCode = 1
+        } finally {
+            $ErrorActionPreference = $previousPreference
+        }
+        if ($exitCode -eq 0 -and $versionText -match 'Python 3\.(\d+)' -and [int]$Matches[1] -ge 8) {
+            return ,$candidate
+        }
+    }
+    return $null
+}
+
 $canonicalSkillRoot = Get-CanonicalPath $SkillRoot
 $canonicalProjectRoot = Get-CanonicalPath $ProjectRoot
 
@@ -304,6 +329,80 @@ if (-not (Test-Path -LiteralPath $configPath)) {
             }
         }
 
+        # Operating profile (workflows/operating-profiles.md) - optional; absent means production
+        if (-not $configObj.PSObject.Properties['operating_profile']) {
+            Write-Host "    [WARN] Config has no 'operating_profile': defaults to production (see workflows/operating-profiles.md)."
+        } elseif ($configObj.operating_profile -isnot [string] -or $configObj.operating_profile -cnotin @("prototype", "pilot", "production")) {
+            $failures += "Invalid operating_profile: '$($configObj.operating_profile)'. Allowed: prototype, pilot, production."
+        }
+
+        # Profile review facts - optional, types strictly validated when present
+        if ($configObj.PSObject.Properties['profile_review']) {
+            $prv = $configObj.profile_review
+            if ($prv -isnot [System.Management.Automation.PSCustomObject]) {
+                $failures += "Field 'profile_review' must be an object."
+            } else {
+                $reviewKeys = @("active_users", "payments_live", "sla_promised", "regulated_data", "reviewed_at", "note")
+                foreach ($rk in $prv.PSObject.Properties) {
+                    if ($rk.Name -cnotin $reviewKeys) {
+                        $failures += "Unknown field 'profile_review.$($rk.Name)'. Allowed: $($reviewKeys -join ', ')."
+                    }
+                }
+                if ($prv.PSObject.Properties['active_users']) {
+                    $au = $prv.active_users
+                    if (($au -isnot [int] -and $au -isnot [long]) -or $au -lt 0) {
+                        $failures += "Field 'profile_review.active_users' must be an integer >= 0, got: '$au'."
+                    }
+                }
+                foreach ($bk in @("payments_live", "sla_promised", "regulated_data")) {
+                    if ($prv.PSObject.Properties[$bk] -and $prv.$bk -isnot [bool]) {
+                        $failures += "Field 'profile_review.$bk' must be a boolean (true/false), got: '$($prv.$bk)'."
+                    }
+                }
+                foreach ($sk in @("reviewed_at", "note")) {
+                    # ConvertFrom-Json turns ISO timestamps into DateTime; both come from a JSON string
+                    if ($prv.PSObject.Properties[$sk] -and $prv.$sk -isnot [string] -and $prv.$sk -isnot [datetime]) {
+                        $failures += "Field 'profile_review.$sk' must be a string."
+                    }
+                }
+            }
+        }
+
+        # Documents listed on the dashboard - optional array of {title, path} with paths relative to the project root
+        if ($configObj.PSObject.Properties['documents']) {
+            $docs = $configObj.documents
+            if ($docs -isnot [System.Array]) {
+                $failures += "Field 'documents' must be an array of {title, path} objects."
+            } else {
+                for ($i = 0; $i -lt $docs.Count; $i++) {
+                    $doc = $docs[$i]
+                    if ($doc -isnot [System.Management.Automation.PSCustomObject]) {
+                        $failures += "Field 'documents[$i]' must be an object with 'title' and 'path'."
+                        continue
+                    }
+                    foreach ($dk in $doc.PSObject.Properties) {
+                        if ($dk.Name -cnotin @("title", "path")) {
+                            $failures += "Unknown field 'documents[$i].$($dk.Name)'. Allowed: title, path."
+                        }
+                    }
+                    if ($doc.title -isnot [string] -or [string]::IsNullOrWhiteSpace($doc.title)) {
+                        $failures += "Field 'documents[$i].title' must be a non-empty string."
+                    }
+                    $docPath = $doc.path
+                    if ($docPath -isnot [string] -or [string]::IsNullOrWhiteSpace($docPath)) {
+                        $failures += "Field 'documents[$i].path' must be a non-empty string."
+                    } elseif ([System.IO.Path]::IsPathRooted($docPath)) {
+                        $failures += "Field 'documents[$i].path' must be relative to the project root, got absolute: '$docPath'."
+                    } else {
+                        $resolved = [System.IO.Path]::GetFullPath([System.IO.Path]::Combine($canonicalProjectRoot, $docPath))
+                        if (-not (Test-IsStrictInside $resolved $canonicalProjectRoot)) {
+                            $failures += "Field 'documents[$i].path' ('$docPath') traverses outside project root: '$resolved'."
+                        }
+                    }
+                }
+            }
+        }
+
         if ($failures.Count -eq 0) {
             Write-Host "    [PASS] .it-department/config.json is valid and strictly conforms to contract."
         }
@@ -348,6 +447,11 @@ if ($configObj -and $configObj.paths) {
         $failures += "Missing dashboard at resolved vault path: $dashboardPath"
     }
 
+    $decisionsLogPath = Join-Path $resolvedVaultDir "03-ADR/decisions-log.md"
+    if (-not (Test-Path -LiteralPath $decisionsLogPath)) {
+        Write-Host "    [WARN] Missing decisions journal at resolved vault path: $decisionsLogPath (re-run init-project to add it; row format: templates/decision-record.md)."
+    }
+
     # Validate Sessions and Worktrees directories
     if (-not (Test-Path -LiteralPath $resolvedSessionsDir)) {
         $failures += "Missing configured sessions directory: $resolvedSessionsDir"
@@ -388,6 +492,41 @@ foreach ($badPath in $pollutedSkillPaths) {
 }
 if ($failures.Count -eq 0) {
     Write-Host "    [PASS] Skill package root hygiene confirmed."
+}
+
+# 5. Vault Lint (scripts/vault_lint.py): frontmatter, status vs folder, links, severities; errors fail validation
+$lintScript = Join-Path $canonicalSkillRoot "scripts/vault_lint.py"
+$vaultPathRejected = [bool]($failures -match "paths\.vault_relative_path")
+if ($configObj -and $configObj.paths -and $resolvedVaultDir -and -not $vaultPathRejected -and (Test-Path -LiteralPath $resolvedVaultDir)) {
+    $python = Find-Python
+    if (-not (Test-Path -LiteralPath $lintScript)) {
+        Write-Host "    [WARN] $lintScript not found: vault lint skipped"
+    } elseif (-not $python) {
+        Write-Host "    [WARN] Python not available: vault lint skipped"
+    } else {
+        $lintArgs = @($python | Select-Object -Skip 1) + @($lintScript, "--root", $canonicalProjectRoot, "--no-dashboard-check")
+        $previousPreference = $ErrorActionPreference
+        $previousIoEncoding = $env:PYTHONIOENCODING
+        $previousOutputEncoding = $null
+        try { $previousOutputEncoding = [Console]::OutputEncoding; [Console]::OutputEncoding = [System.Text.Encoding]::UTF8 } catch { }
+        try {
+            $ErrorActionPreference = 'Continue'
+            $env:PYTHONIOENCODING = 'utf-8'
+            $lintOutput = @(& $python[0] @lintArgs 2>&1 | ForEach-Object { "$_" })
+            $lintExit = $LASTEXITCODE
+        } finally {
+            $ErrorActionPreference = $previousPreference
+            $env:PYTHONIOENCODING = $previousIoEncoding
+            if ($previousOutputEncoding) { try { [Console]::OutputEncoding = $previousOutputEncoding } catch { } }
+        }
+        Write-Host "    Vault lint ($($python -join ' ') scripts/vault_lint.py --no-dashboard-check):"
+        foreach ($line in $lintOutput) { Write-Host "      $line" }
+        if ($lintExit -eq 0) {
+            Write-Host "    [PASS] Vault lint found no errors."
+        } else {
+            $failures += "Vault lint reported errors (vault_lint.py exit $lintExit); fix the findings listed above."
+        }
+    }
 }
 
 if ($failures.Count -gt 0) {

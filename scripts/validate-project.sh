@@ -25,6 +25,19 @@ else
     exit 1
 fi
 
+# Detect Python 3.8+ for scripts/vault_lint.py (independent of the JSON engine). A candidate counts only when
+# "--version" exits 0 and reports Python 3.8 or newer: the Windows Store "python" alias is a stub that exits
+# non-zero with "Python was not found".
+PYTHON_CMD=""
+for candidate in python3 python "py -3"; do
+    # shellcheck disable=SC2086
+    if command -v "${candidate%% *}" >/dev/null 2>&1 && version_text="$($candidate --version 2>&1)" \
+        && [[ "$version_text" =~ Python\ 3\.([0-9]+) ]] && [ "${BASH_REMATCH[1]}" -ge 8 ]; then
+        PYTHON_CMD="$candidate"
+        break
+    fi
+done
+
 resolve_canonical() {
     local target="$1"
     if [ -d "$target" ]; then
@@ -257,6 +270,55 @@ if (crv === undefined || crv === null) {
     }
 }
 
+// Operating profile (workflows/operating-profiles.md) - optional; absent means production
+if (!Object.prototype.hasOwnProperty.call(cfg, "operating_profile")) {
+    console.log("    [WARN] Config has no operating_profile: defaults to production (see workflows/operating-profiles.md).");
+} else if (!["prototype", "pilot", "production"].includes(cfg.operating_profile)) {
+    errors.push("Invalid operating_profile: " + JSON.stringify(cfg.operating_profile) + ". Allowed: prototype, pilot, production.");
+}
+
+// Profile review facts - optional, types strictly validated when present
+if (Object.prototype.hasOwnProperty.call(cfg, "profile_review")) {
+    const prv = cfg.profile_review;
+    if (prv === null || typeof prv !== "object" || Array.isArray(prv)) {
+        errors.push("profile_review must be an object.");
+    } else {
+        const reviewKeys = ["active_users", "payments_live", "sla_promised", "regulated_data", "reviewed_at", "note"];
+        for (const k of Object.keys(prv)) {
+            if (!reviewKeys.includes(k)) errors.push("Unknown field profile_review." + k + ". Allowed: " + reviewKeys.join(", ") + ".");
+        }
+        if (prv.active_users !== undefined && (!Number.isInteger(prv.active_users) || prv.active_users < 0)) {
+            errors.push("profile_review.active_users must be an integer >= 0, got: " + JSON.stringify(prv.active_users));
+        }
+        for (const k of ["payments_live", "sla_promised", "regulated_data"]) {
+            if (prv[k] !== undefined && typeof prv[k] !== "boolean") errors.push("profile_review." + k + " must be boolean, got: " + JSON.stringify(prv[k]));
+        }
+        for (const k of ["reviewed_at", "note"]) {
+            if (prv[k] !== undefined && typeof prv[k] !== "string") errors.push("profile_review." + k + " must be a string.");
+        }
+    }
+}
+
+// Documents listed on the dashboard - optional array of {title, path}, paths relative to the project root
+if (Object.prototype.hasOwnProperty.call(cfg, "documents")) {
+    const docs = cfg.documents;
+    if (!Array.isArray(docs)) {
+        errors.push("documents must be an array of {title, path} objects.");
+    } else {
+        docs.forEach((d, i) => {
+            if (d === null || typeof d !== "object" || Array.isArray(d)) { errors.push("documents[" + i + "] must be an object with title and path."); return; }
+            for (const k of Object.keys(d)) {
+                if (k !== "title" && k !== "path") errors.push("Unknown field documents[" + i + "]." + k + ". Allowed: title, path.");
+            }
+            if (typeof d.title !== "string" || !d.title.trim()) errors.push("documents[" + i + "].title must be a non-empty string.");
+            if (typeof d.path !== "string" || !d.path.trim()) { errors.push("documents[" + i + "].path must be a non-empty string."); return; }
+            if (path.isAbsolute(d.path)) { errors.push("documents[" + i + "].path must be relative to the project root, got: " + d.path); return; }
+            const rel = path.relative(projectRoot, path.resolve(projectRoot, d.path));
+            if (rel.startsWith("..") || rel === "") errors.push("documents[" + i + "].path (" + d.path + ") resolves outside project_root");
+        });
+    }
+}
+
 if (errors.length > 0) {
     console.error(errors.join("\n"));
     process.exit(1);
@@ -439,6 +501,58 @@ else:
                 if not isinstance(it, dict) or not isinstance(it.get("path"), str) or not it.get("path") or not isinstance(it.get("locales"), list) or not it.get("locales"):
                     errors.append("Each content_review.inline_tables entry needs path and a non-empty locales array.")
 
+# Operating profile (workflows/operating-profiles.md) - optional; absent means production
+if "operating_profile" not in cfg:
+    print("    [WARN] Config has no operating_profile: defaults to production (see workflows/operating-profiles.md).")
+elif not isinstance(cfg.get("operating_profile"), str) or cfg.get("operating_profile") not in ("prototype", "pilot", "production"):
+    errors.append("Invalid operating_profile: " + json.dumps(cfg.get("operating_profile")) + ". Allowed: prototype, pilot, production.")
+
+# Profile review facts - optional, types strictly validated when present
+if "profile_review" in cfg:
+    prv = cfg.get("profile_review")
+    if not isinstance(prv, dict):
+        errors.append("profile_review must be an object.")
+    else:
+        review_keys = ["active_users", "payments_live", "sla_promised", "regulated_data", "reviewed_at", "note"]
+        for rk in prv:
+            if rk not in review_keys:
+                errors.append("Unknown field profile_review." + rk + ". Allowed: " + ", ".join(review_keys) + ".")
+        if "active_users" in prv:
+            au = prv.get("active_users")
+            if isinstance(au, bool) or not isinstance(au, int) or au < 0:
+                errors.append("profile_review.active_users must be an integer >= 0, got: " + json.dumps(au))
+        for bk in ("payments_live", "sla_promised", "regulated_data"):
+            if bk in prv and not isinstance(prv.get(bk), bool):
+                errors.append("profile_review." + bk + " must be boolean, got: " + json.dumps(prv.get(bk)))
+        for sk in ("reviewed_at", "note"):
+            if sk in prv and not isinstance(prv.get(sk), str):
+                errors.append("profile_review." + sk + " must be a string.")
+
+# Documents listed on the dashboard - optional array of {title, path}, paths relative to the project root
+if "documents" in cfg:
+    docs = cfg.get("documents")
+    if not isinstance(docs, list):
+        errors.append("documents must be an array of {title, path} objects.")
+    else:
+        for i, d in enumerate(docs):
+            if not isinstance(d, dict):
+                errors.append("documents[%d] must be an object with title and path." % i)
+                continue
+            for dk in d:
+                if dk not in ("title", "path"):
+                    errors.append("Unknown field documents[%d].%s. Allowed: title, path." % (i, dk))
+            if not isinstance(d.get("title"), str) or not d.get("title").strip():
+                errors.append("documents[%d].title must be a non-empty string." % i)
+            dp = d.get("path")
+            if not isinstance(dp, str) or not dp.strip():
+                errors.append("documents[%d].path must be a non-empty string." % i)
+            elif os.path.isabs(dp):
+                errors.append("documents[%d].path must be relative to the project root, got: %s" % (i, dp))
+            else:
+                rel = os.path.relpath(os.path.realpath(os.path.join(project_root, dp)), project_root)
+                if rel.startswith("..") or rel == ".":
+                    errors.append("documents[%d].path (%s) resolves outside project_root" % (i, dp))
+
 if errors:
     print("\n".join(errors), file=sys.stderr)
     sys.exit(1)
@@ -502,6 +616,10 @@ fi
 
 echo "    [PASS] Configured vault, sessions, and worktree directories verified."
 
+if [ ! -f "$RESOLVED_VAULT/03-ADR/decisions-log.md" ]; then
+    echo "    [WARN] Missing decisions journal: $RESOLVED_VAULT/03-ADR/decisions-log.md (re-run init-project to add it; row format: templates/decision-record.md)."
+fi
+
 # Check for fictional example leakage in configured vault
 if [ -f "$RESOLVED_VAULT/01-Tasks/Backlog/SHOP-102.md" ] || [ -f "$RESOLVED_VAULT/01-Tasks/Ready-For-Dev/SHOP-102.md" ]; then
     echo "Error: Fictional example SHOP-102 was copied into active project backlog." >&2
@@ -515,5 +633,24 @@ if [ -d "$SKILL_ROOT/vault" ] || [ -f "$SKILL_ROOT/config.json" ] || [ -d "$SKIL
     exit 1
 fi
 echo "    [PASS] Skill package root hygiene confirmed."
+
+# Vault lint (scripts/vault_lint.py): frontmatter, status vs folder, links, severities; errors fail validation
+LINT_SCRIPT="$SKILL_ROOT/scripts/vault_lint.py"
+if [ ! -f "$LINT_SCRIPT" ]; then
+    echo "    [WARN] $LINT_SCRIPT not found: vault lint skipped"
+elif [ -z "$PYTHON_CMD" ]; then
+    echo "    [WARN] Python not available: vault lint skipped"
+else
+    LINT_RC=0
+    # shellcheck disable=SC2086
+    LINT_OUTPUT="$(PYTHONIOENCODING=utf-8 $PYTHON_CMD "$LINT_SCRIPT" --root "$PROJECT_ROOT" --no-dashboard-check 2>&1)" || LINT_RC=$?
+    echo "    Vault lint ($PYTHON_CMD scripts/vault_lint.py --no-dashboard-check):"
+    printf '%s\n' "$LINT_OUTPUT" | sed 's/^/      /'
+    if [ "$LINT_RC" -ne 0 ]; then
+        echo "Error: Vault lint reported errors (vault_lint.py exit $LINT_RC); fix the findings listed above." >&2
+        exit 1
+    fi
+    echo "    [PASS] Vault lint found no errors."
+fi
 
 echo "==> All validation checks passed successfully!"
