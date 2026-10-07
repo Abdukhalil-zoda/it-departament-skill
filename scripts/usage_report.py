@@ -22,7 +22,9 @@ Inputs (all optional, skipped when missing; paths come from <root>/.it-departmen
 
 Output: <efficiency.reports_path>/usage-audit-<date>.md plus a .json sidecar with the totals that the
 next audit uses for its delta. --since defaults to the date of the previous audit report, or to
-audit_interval_days + 1 days ago when there is none.
+audit_interval_days + 1 days ago when there is none. Section 7 has a Decision column for the CTO's
+verdict; when a previous report exists the sidecar also records its proposals_total / proposals_pending
+(section 7 rows with a Change / of those, rows without a Decision).
 
 Exit codes: 0 ok, 2 bad arguments. Requires Python 3.8+, standard library only.
 """
@@ -89,6 +91,38 @@ def previous_reports(reports_dir):
         entry = found.setdefault(m.group(1), {})
         entry[m.group(2)] = f
     return [(d, found[d].get('json')) for d in sorted(found, reverse=True)]
+
+
+def count_proposals(md_path):
+    """(total, pending) of the "Proposals" section of an audit report: rows with a non-empty Change; pending =
+    of those, rows with an empty Decision (reports older than the Decision column count as pending).
+    None when the report cannot be read."""
+    try:
+        with open(md_path, encoding='utf-8-sig', errors='replace') as fh:
+            lines = fh.read().splitlines()
+    except OSError:
+        return None
+    start = next((i for i, line in enumerate(lines) if line.startswith('#') and 'proposals' in line.lower()), None)
+    rows = []
+    for line in lines[start + 1:] if start is not None else []:
+        s = line.strip()
+        if line.startswith('#') or (rows and not s.startswith('|')):
+            break
+        if s.startswith('|'):
+            rows.append([c.strip() for c in re.split(r'(?<!\\)\|', s.strip('|'))])
+    if not rows:
+        return 0, 0
+    head = [c.lower() for c in rows[0]]
+    ci = next((i for i, h in enumerate(head) if h.startswith('change')), None)
+    di = next((i for i, h in enumerate(head) if h.startswith('decision')), None)
+    total = pending = 0
+    for r in rows[1:]:
+        if ci is None or ci >= len(r) or not r[ci] or re.match(r'^:?-+:?$', r[ci]):
+            continue
+        total += 1
+        if di is None or di >= len(r) or not r[di]:
+            pending += 1
+    return total, pending
 
 
 # --------------------------------------------------------------------------- inputs
@@ -473,10 +507,14 @@ def main():
               '- Top-3 token sources and top-3 time consumers, with numbers from sections 1-3.',
               '- Delta vs previous audit: better / worse / same, with numbers from section 5.', '',
               '## 7. Proposals for the CTO (max 5, auditor fills in)', '',
-              '| # | Change | Evidence (numbers) | Expected saving | Where applied | Risk |', '|---|---|---|---|---|---|',
-              '| 1 |  |  |  |  |  |', '']
+              '| # | Change | Evidence (numbers) | Expected saving | Where applied | Risk | Decision |', '|---|---|---|---|---|---|---|',
+              '| 1 |  |  |  |  |  |  |', '']
     if not L:
         lines += ['> First proposal must name the sessions that did not export their usage (no ledger files in the window).', '']
+    if prev_date:  # proposals of the previous report still waiting for a CTO decision (Decision column empty)
+        counts = count_proposals(os.path.join(reports_dir, 'usage-audit-%s.md' % prev_date))
+        if counts is not None:
+            totals['proposals_total'], totals['proposals_pending'] = counts
 
     os.makedirs(os.path.dirname(out) or '.', exist_ok=True)
     with open(out, 'w', encoding='utf-8') as fh:
