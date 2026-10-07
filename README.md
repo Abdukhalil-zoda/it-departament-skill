@@ -59,12 +59,40 @@ The package is stateless. All project data lives in the target project:
     └── jobs/                 optional machine-time feed (job logs or jobs.jsonl)
 ```
 
+## Installing and updating
+
+The package is versioned (`VERSION`, `CHANGELOG.md`, tag `v<version>` on `master`; every merged pull request
+bumps it). Pick the channel that matches how you work; all three come from this repository.
+
+| Channel | Install | Update |
+| :--- | :--- | :--- |
+| **Project copy** via the [Agent Skills CLI](https://github.com/vercel-labs/skills): what Cowork, Codex and cloud sessions see | `npx skills add Abdukhalil-zoda/it-departament-skill -y` → `<project_root>/.agents/skills/it-departament-skill/` and `skills-lock.json` | `npx skills update it-departament-skill -y -p` |
+| **Claude Code plugin** (CLI and desktop) | `/plugin marketplace add Abdukhalil-zoda/it-departament-skill`, then `/plugin install it-departament-skill@it-departament` (`--scope project` shares it with the team through `.claude/settings.json`) | `claude plugin update it-departament-skill@it-departament`, or turn on auto-update for the `it-departament` marketplace in the `/plugin` panel; `/reload-plugins` loads the new version |
+| **Git checkout or plain copy** anywhere | `git clone https://github.com/Abdukhalil-zoda/it-departament-skill` into your skills folder, or copy the package | `scripts/update-skill.ps1` / `.sh` |
+
+One updater covers every channel and also migrates the project:
+
+```powershell
+pwsh -File <skill_root>/scripts/update-skill.ps1 -ProjectRoot <project_root>          # update + init-project + validate-project
+pwsh -File <skill_root>/scripts/update-skill.ps1 -Check                                 # is upstream newer?
+```
+```bash
+<skill_root>/scripts/update-skill.sh <project_root>
+<skill_root>/scripts/update-skill.sh --check
+```
+
+It detects how the copy was installed (git checkout, Agent Skills CLI copy, plugin cache, plain copy), updates
+it, prints the `CHANGELOG.md` entries between the old and the new version, whose **Migration** notes are the
+manual steps (new config keys, a profile decision, lint findings), then re-runs `init-project` (adds new
+folders and files, never overwrites) and `validate-project`. In Claude Code the plugin adds
+`/it-departament-skill:update-skill`, `/it-departament-skill:validate-project` and `/it-departament-skill:sync-dashboard`,
+and exposes the eight role files as sub-agents.
+
 ## Quick start
 
-1.  **Install the package** where your host looks for skills, for example
-    `<project_root>/.agents/skills/it-departament-skill/` (project-scoped, Codex / Claude Code) or
-    `~/.claude/skills/it-departament-skill/` (user-scoped, Claude Code). Keep it outside the project's
-    source tree you want the agents to modify.
+1.  **Install the package** with one of the channels above, for example
+    `<project_root>/.agents/skills/it-departament-skill/` (project-scoped, Codex / Claude Code / Cowork) or
+    the Claude Code plugin. Keep it outside the project's source tree you want the agents to modify.
 2.  **Initialise the project** (idempotent, never overwrites existing notes or config):
     ```powershell
     pwsh -File <skill_root>/scripts/init-project.ps1 -ProjectRoot <project_root>

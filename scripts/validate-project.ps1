@@ -110,6 +110,9 @@ $canonicalSkillRoot = Get-CanonicalPath $SkillRoot
 $canonicalProjectRoot = Get-CanonicalPath $ProjectRoot
 
 Write-Host "==> Validating IT Department Project Setup"
+$skillVersionFile = Join-Path $canonicalSkillRoot "VERSION"
+$skillVersion = if (Test-Path -LiteralPath $skillVersionFile) { (Get-Content -Raw -LiteralPath $skillVersionFile).Trim() } else { "unknown" }
+Write-Host "    Skill version: $skillVersion (update: scripts/update-skill.ps1 -Check)"
 Write-Host "    Project Root: $canonicalProjectRoot"
 Write-Host "    Skill Root:   $canonicalSkillRoot"
 

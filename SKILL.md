@@ -12,6 +12,9 @@ description: >-
   Localization Reviewer checks every user-facing text twice: at task creation and before each release.
   Operating profiles (prototype, pilot, production) size every gate; a session protocol with a lock file
   guards the vault.
+metadata:
+  version: "1.2.0"
+  repository: https://github.com/Abdukhalil-zoda/it-departament-skill
 ---
 
 # IT Department Skill: Coordinated Software Engineering Organization
@@ -27,6 +30,9 @@ The skill package is strictly separated from target project runtime data:
 ```text
 skill_root/                           # The installed skill package (reusable, stateless)
 ├── SKILL.md                          # Main routing instructions & operational entrypoint
+├── VERSION, CHANGELOG.md             # Package version and migration notes (scripts/update-skill prints them)
+├── .claude-plugin/                   # plugin.json + marketplace.json: Claude Code plugin & marketplace
+├── commands/                         # Plugin slash commands: update-skill, validate-project, sync-dashboard
 ├── assets/                           # Reusable templates (vault-template, config-template)
 ├── agents/                           # Role system prompts & boundaries
 ├── templates/                        # Task, bug, ADR, decision record, QA report, usage-audit prompt,
@@ -84,6 +90,17 @@ pwsh -File "<skill_root>/scripts/validate-project.ps1" -ProjectRoot "<project_ro
 *   Strict Boundary Checks: Rejects invalid paths, root collisions, or directory traversal before mutating the filesystem.
 *   Vault Lint: when Python 3.8+ is available, `validate-project` runs `scripts/vault_lint.py --no-dashboard-check` (frontmatter, ids vs file names, status vs folder, wikilinks, severity vs `release_blocking`, content intake verdicts) and fails on lint errors; without Python it warns and skips the lint. `validate-project` also checks `operating_profile`, `profile_review` and `documents` when present.
 *   Fictional examples (such as `SHOP-102`) remain in `references/examples/` and are **never** copied into the project's active backlog.
+
+### Installing & Updating the Package
+The package is versioned (`VERSION`, `CHANGELOG.md`, `metadata.version` in this file; tag `v<version>` on `master`). Three install channels share one repository:
+
+| Channel | Install | Update |
+| :--- | :--- | :--- |
+| **Project copy** (Cowork, Codex, Claude Code; what cloud sessions see) via the Agent Skills CLI | `npx skills add Abdukhalil-zoda/it-departament-skill -y` → `<project_root>/.agents/skills/it-departament-skill/` + `skills-lock.json` | `npx skills update it-departament-skill -y -p` |
+| **Claude Code plugin** (CLI, desktop) with its own marketplace | `/plugin marketplace add Abdukhalil-zoda/it-departament-skill` then `/plugin install it-departament-skill@it-departament` (`--scope project` shares it through `.claude/settings.json`) | `claude plugin update it-departament-skill@it-departament`, or enable auto-update for the marketplace in the `/plugin` panel; `/reload-plugins` loads it |
+| **Git checkout or plain copy** anywhere | `git clone` into the skills folder, or copy the package | `scripts/update-skill.ps1` / `.sh` |
+
+`scripts/update-skill.{ps1,sh}` is the one-step updater for every channel: it detects how the copy was installed, updates it, prints the changelog entries between the old and the new version (their **Migration** notes are the manual steps), then re-runs `init-project` and `validate-project` on the project (`-ProjectRoot` / `--project`, inferred for copies under `.agents/skills` or `.claude/skills`); `-Check` / `--check` only reports whether upstream is newer. The plugin ships the slash commands `/it-departament-skill:update-skill`, `/it-departament-skill:validate-project` and `/it-departament-skill:sync-dashboard`, and exposes the eight role files as sub-agents. `validate-project` prints the installed version.
 
 ---
 

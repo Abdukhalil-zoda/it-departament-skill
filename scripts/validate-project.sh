@@ -74,6 +74,8 @@ is_same_or_inside() {
 }
 
 echo "==> Validating IT Department Project Setup"
+if [ -f "$SKILL_ROOT/VERSION" ]; then SKILL_VERSION="$(tr -d '[:space:]' < "$SKILL_ROOT/VERSION")"; else SKILL_VERSION="unknown"; fi
+echo "    Skill version: $SKILL_VERSION (update: scripts/update-skill.sh --check)"
 echo "    Project Root: $PROJECT_ROOT"
 echo "    Skill Root:   $SKILL_ROOT"
 
