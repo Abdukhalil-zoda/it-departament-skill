@@ -121,7 +121,13 @@ if (Test-IsSameOrInside $canonicalProjectRoot $canonicalSkillRoot) {
     $failures += "Project root ('$canonicalProjectRoot') cannot be equal to or inside skill root ('$canonicalSkillRoot')."
 }
 if (Test-IsSameOrInside $canonicalSkillRoot $canonicalProjectRoot) {
-    $failures += "Skill root ('$canonicalSkillRoot') cannot be inside project root ('$canonicalProjectRoot')."
+    # Allowed inside the project only in a standard skills folder (<project>/.agents/skills/<name>, <project>/.claude/skills/<name>)
+    $skillParent = Split-Path -Parent $canonicalSkillRoot
+    $skillGrand = if ($skillParent) { Split-Path -Parent $skillParent } else { "" }
+    $inSkillsFolder = $skillParent -and $skillGrand -and ((Split-Path -Leaf $skillParent) -eq "skills") -and ((Split-Path -Leaf $skillGrand) -in @(".agents", ".claude"))
+    if (-not $inSkillsFolder) {
+        $failures += "Skill root ('$canonicalSkillRoot') cannot be inside project root ('$canonicalProjectRoot') unless it is under <project>/.agents/skills/ or <project>/.claude/skills/."
+    }
 }
 
 # 1. Validate Project Runtime Configuration

@@ -134,7 +134,9 @@ case "$MODE" in
         TMP="$(mktemp -d "${TMPDIR:-/tmp}/it-skill-update-XXXXXX")"
         echo "    git clone --depth 1 ${REF:+--branch $REF }$REPO_URL <tmp>; mirror <tmp> -> $SKILL_ROOT"
         if [ "$DRY" = 0 ]; then
-            if [ -n "$REF" ]; then git clone --depth 1 --quiet --branch "$REF" "$REPO_URL" "$TMP/src"; else git clone --depth 1 --quiet "$REPO_URL" "$TMP/src"; fi
+            DEPTH="--depth 1"; [ -d "$REPO_URL" ] && DEPTH=""   # shallow only for remote URLs
+            # shellcheck disable=SC2086
+            if [ -n "$REF" ]; then git clone $DEPTH --quiet --branch "$REF" "$REPO_URL" "$TMP/src"; else git clone $DEPTH --quiet "$REPO_URL" "$TMP/src"; fi
             rm -rf "$TMP/src/.git"
             if command -v rsync >/dev/null 2>&1; then
                 rsync -a --delete "$TMP/src/" "$SKILL_ROOT/"

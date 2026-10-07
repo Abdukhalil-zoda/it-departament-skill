@@ -23,6 +23,11 @@ has to do by hand.
   between the old and the new version, re-runs `init-project` and `validate-project` on the project.
 - `VERSION`, this changelog, `metadata.version` in `SKILL.md`; `validate-project` prints the installed version.
 
+### Changed
+- `init-project` and `validate-project` accept a skill installed inside the project when it sits in a standard
+  skills folder (`<project>/.agents/skills/<name>` or `<project>/.claude/skills/<name>`), which is where
+  `npx skills add` puts it; any other nesting is still rejected.
+
 ### Migration
 - Projects: none. Optional: `scripts/update-skill.ps1 -Check` (or `.sh --check`) tells whether upstream is newer.
 - Claude Code users: `/plugin marketplace add Abdukhalil-zoda/it-departament-skill`, then

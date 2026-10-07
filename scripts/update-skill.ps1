@@ -174,7 +174,8 @@ switch ($Mode) {
     "copy" {
         Assert-SafeSkillFolder $SkillRoot
         $tmp = Join-Path ([System.IO.Path]::GetTempPath()) ("it-skill-update-" + [guid]::NewGuid().ToString("N").Substring(0, 8))
-        $cloneArgs = @("clone", "--depth", "1", "--quiet")
+        $cloneArgs = @("clone", "--quiet")
+        if (-not (Test-Path -LiteralPath $repoUrl)) { $cloneArgs += @("--depth", "1") }   # shallow only for remote URLs
         if ($Ref) { $cloneArgs += @("--branch", $Ref) }
         $cloneArgs += @($repoUrl, $tmp)
         Write-Host "    git $($cloneArgs -join ' '); robocopy <clone> `"$SkillRoot`" /MIR"

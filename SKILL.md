@@ -65,7 +65,7 @@ skill_root/                           # The installed skill package (reusable, s
 ```
 
 ### Path Resolution Rules
-*   `skill_root`: The installed skill package directory. Never write project tasks, logs, or checkouts here.
+*   `skill_root`: The installed skill package directory. Never write project tasks, logs, or checkouts here. It may live inside the project only in a standard skills folder (`<project_root>/.agents/skills/it-departament-skill/` or `<project_root>/.claude/skills/it-departament-skill/`); `init-project` and `validate-project` reject any other nesting.
 *   `project_root`: The target project workspace containing its repositories.
 *   **Never blindly infer `project_root` from `skill_root` or current working directory.** Resolve `project_root` from the user's selected workspace or explicitly ask the user when ambiguous.
 
