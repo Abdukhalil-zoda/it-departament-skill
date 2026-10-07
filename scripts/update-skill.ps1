@@ -172,7 +172,7 @@ switch ($Mode) {
         }
     }
     "copy" {
-        Assert-SafeSkillFolder $SkillRoot
+        try { Assert-SafeSkillFolder $SkillRoot } catch { Write-Host "Error: $($_.Exception.Message)"; exit 2 }
         $tmp = Join-Path ([System.IO.Path]::GetTempPath()) ("it-skill-update-" + [guid]::NewGuid().ToString("N").Substring(0, 8))
         $cloneArgs = @("clone", "--quiet")
         if (-not (Test-Path -LiteralPath $repoUrl)) { $cloneArgs += @("--depth", "1") }   # shallow only for remote URLs
