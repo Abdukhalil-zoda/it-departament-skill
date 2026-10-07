@@ -1,5 +1,5 @@
 {
-  "name": "it-departament",
+  "name": "it-department",
   "owner": {
     "name": "Abdulaziz Abdukhalil-zoda",
     "url": "https://github.com/Abdukhalil-zoda"
@@ -7,10 +7,10 @@
   "description": "Marketplace of the IT Department skill: install the package into Claude Code and keep it updated from GitHub.",
   "plugins": [
     {
-      "name": "it-departament-skill",
+      "name": "it-department-skill",
       "source": {
         "source": "github",
-        "repo": "Abdukhalil-zoda/it-departament-skill"
+        "repo": "Abdukhalil-zoda/it-department-skill"
       },
       "description": "Coordinated software engineering organization: roles, operating profiles, delivery pipeline with an Obsidian vault, token optimizer, content & localization reviewer, dashboard and vault tooling."
     }

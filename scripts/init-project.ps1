@@ -8,7 +8,7 @@
 .PARAMETER ProjectRoot
     The target project's root directory containing its workspace/repository.
 .PARAMETER SkillRoot
-    The path to the installed it-departament-skill package. Defaults to the parent of this script.
+    The path to the installed it-department-skill package. Defaults to the parent of this script.
 .PARAMETER ProjectName
     Optional project name. Defaults to the directory name of ProjectRoot.
 #>

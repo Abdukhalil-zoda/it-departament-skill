@@ -5,7 +5,7 @@
     Detects how this skill folder was installed and updates it the matching way:
       git        the folder is a git checkout            -> git fetch + checkout -Ref (default: the default branch)
       skills-cli the project's skills-lock.json lists it -> npx skills update <name> -y -p   (Agent Skills CLI)
-      plugin     the folder is in a Claude plugin cache  -> claude plugin update it-departament-skill@it-departament
+      plugin     the folder is in a Claude plugin cache  -> claude plugin update it-department-skill@it-department
       copy       anything else                           -> git clone -Ref of -Repo and mirror it over the folder
     Afterwards it prints the CHANGELOG entries between the old and the new version (their "Migration" notes are
     the manual steps), and - when a project root is given or can be inferred from the folder location
@@ -37,8 +37,8 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
-$DefaultRepo = "https://github.com/Abdukhalil-zoda/it-departament-skill"
-$PluginId = "it-departament-skill@it-departament"
+$DefaultRepo = "https://github.com/Abdukhalil-zoda/it-department-skill"
+$PluginId = "it-department-skill@it-department"
 
 function Get-SkillVersion([string]$dir) {
     $f = Join-Path $dir "VERSION"
