@@ -106,6 +106,11 @@ function Assert-ValidRelativePath([string]$RelativePath, [string]$Field, [string
     return $resolved
 }
 
+# UTF-8 without BOM and with the content's own line endings (Set-Content adds a BOM in Windows PowerShell 5.1)
+function Write-Utf8NoBom([string]$Path, [string]$Content) {
+    [System.IO.File]::WriteAllText($Path, $Content, (New-Object System.Text.UTF8Encoding $false))
+}
+
 # --- 1. Validate & Canonicalize Roots BEFORE Filesystem Mutation ---
 $canonicalSkillRoot = Get-CanonicalPath $SkillRoot
 $canonicalProjectRoot = Get-CanonicalPath $ProjectRoot
@@ -151,6 +156,12 @@ if ($isNewConfig) {
     $rawTemplate = Get-Content -Raw -LiteralPath $configTemplatePath -Encoding UTF8
     $configObj = ConvertFrom-Json $rawTemplate
     $configObj.project_name = [string]$ProjectName
+    # A new project's profile review is dated today (template placeholder {YYYY-MM-DD}); existing configs are never touched
+    $reviewObj = if ($configObj.PSObject.Properties['profile_review']) { $configObj.profile_review } else { $null }
+    if ($reviewObj -is [System.Management.Automation.PSCustomObject] -and $reviewObj.PSObject.Properties['reviewed_at'] -and
+        $reviewObj.reviewed_at -is [string] -and $reviewObj.reviewed_at -ceq '{YYYY-MM-DD}') {
+        $reviewObj.reviewed_at = (Get-Date).ToString("yyyy-MM-dd")
+    }
 } else {
     try {
         $rawExisting = Get-Content -Raw -LiteralPath $projectConfigPath -Encoding UTF8
@@ -194,6 +205,20 @@ Write-Host "    Skill Root:   $canonicalSkillRoot"
 
 if (-not (Test-Path -LiteralPath $projectRuntimeDir)) {
     $null = New-Item -ItemType Directory -Force -Path $projectRuntimeDir
+}
+# Runtime data shared through the project folder but never committed (lock, worktrees, raw usage, dated hand-offs)
+$runtimeGitignore = Join-Path $projectRuntimeDir ".gitignore"
+if (-not (Test-Path -LiteralPath $runtimeGitignore)) {
+    $runtimeIgnoreLines = @(
+        "lock.json",
+        "worktrees/",
+        "sessions/_usage/raw/",
+        "sessions/_usage/audit-runs/",
+        "sessions/_usage/audit-prompt.generated.md",
+        "sessions/_handoff/*",
+        "!sessions/_handoff/latest.md"
+    )
+    Write-Utf8NoBom $runtimeGitignore (($runtimeIgnoreLines -join "`n") + "`n")
 }
 if (-not (Test-Path -LiteralPath $resolvedSessionsDir)) {
     $null = New-Item -ItemType Directory -Force -Path $resolvedSessionsDir
@@ -261,6 +286,10 @@ foreach ($item in $templateItems) {
                 $contentDoc = Get-Content -Raw -LiteralPath $item.FullName -Encoding UTF8
                 $contentDoc = $contentDoc.Replace('{SOURCE_LOCALE}', $contentSourceLocale).Replace('{LOCALES}', $contentLocales).Replace('{DATE}', (Get-Date).ToString("yyyy-MM-dd"))
                 Set-Content -LiteralPath $targetItemPath -Value $contentDoc -Encoding UTF8
+            } elseif (($relativePath -replace '\\', '/') -eq "03-ADR/decisions-log.md") {
+                $journalDoc = Get-Content -Raw -LiteralPath $item.FullName -Encoding UTF8
+                $journalDoc = $journalDoc.Replace('{PROJECT_NAME}', [string]$configObj.project_name).Replace('{DATE}', (Get-Date).ToString("yyyy-MM-dd"))
+                Write-Utf8NoBom $targetItemPath $journalDoc
             } else {
                 Copy-Item -LiteralPath $item.FullName -Destination $targetItemPath -Force
             }
@@ -273,6 +302,12 @@ Write-Host "    Vault:     $resolvedVaultDir"
 Write-Host "    Sessions:  $resolvedSessionsDir"
 Write-Host "    Worktrees: $resolvedWorktreesDir"
 Write-Host "    Ledger:    $resolvedLedgerDir"
+$activeProfile = if ($configObj.PSObject.Properties['operating_profile']) { [string]$configObj.operating_profile } else { "" }
+if (-not [string]::IsNullOrWhiteSpace($activeProfile)) {
+    Write-Host "    Profile:   $activeProfile (workflows/operating-profiles.md)"
+} else {
+    Write-Host "    Profile:   production (config.json has no operating_profile; workflows/operating-profiles.md)"
+}
 if (-not $hasEfficiency) {
     Write-Host "    [HINT] config.json has no 'efficiency' block: the token optimizer uses default limits and paths. Copy the block from '$configTemplatePath' to tune rules R1-R5 and the audit interval."
 }
