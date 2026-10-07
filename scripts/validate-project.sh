@@ -74,6 +74,8 @@ is_same_or_inside() {
 }
 
 echo "==> Validating IT Department Project Setup"
+if [ -f "$SKILL_ROOT/VERSION" ]; then SKILL_VERSION="$(tr -d '[:space:]' < "$SKILL_ROOT/VERSION")"; else SKILL_VERSION="unknown"; fi
+echo "    Skill version: $SKILL_VERSION (update: scripts/update-skill.sh --check)"
 echo "    Project Root: $PROJECT_ROOT"
 echo "    Skill Root:   $SKILL_ROOT"
 
@@ -82,8 +84,12 @@ if is_same_or_inside "$PROJECT_ROOT" "$SKILL_ROOT"; then
     exit 1
 fi
 if is_same_or_inside "$SKILL_ROOT" "$PROJECT_ROOT"; then
-    echo "Error: Skill root ('$SKILL_ROOT') cannot be inside project root ('$PROJECT_ROOT')." >&2
-    exit 1
+    # Allowed inside the project only in a standard skills folder (<project>/.agents/skills/<name>, <project>/.claude/skills/<name>)
+    skill_parent="$(dirname "$SKILL_ROOT")"; skill_grand="$(dirname "$skill_parent")"
+    if ! { [ "$(basename "$skill_parent")" = "skills" ] && { [ "$(basename "$skill_grand")" = ".agents" ] || [ "$(basename "$skill_grand")" = ".claude" ]; }; }; then
+        echo "Error: Skill root ('$SKILL_ROOT') cannot be inside project root ('$PROJECT_ROOT') unless it is under <project>/.agents/skills/ or <project>/.claude/skills/." >&2
+        exit 1
+    fi
 fi
 
 PROJECT_CONFIG="$PROJECT_ROOT/.it-department/config.json"

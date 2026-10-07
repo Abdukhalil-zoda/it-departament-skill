@@ -119,7 +119,14 @@ if (Test-IsSameOrInside $canonicalProjectRoot $canonicalSkillRoot) {
     throw "Invalid ProjectRoot: Project root ('$canonicalProjectRoot') cannot be equal to or located inside skill root ('$canonicalSkillRoot')."
 }
 if (Test-IsSameOrInside $canonicalSkillRoot $canonicalProjectRoot) {
-    throw "Invalid ProjectRoot: Skill root ('$canonicalSkillRoot') cannot be located inside project root ('$canonicalProjectRoot')."
+    # A skill installed inside the project is fine when it sits in a standard skills folder
+    # (<project>/.agents/skills/<name> or <project>/.claude/skills/<name>, e.g. via `npx skills add`).
+    $skillParent = Split-Path -Parent $canonicalSkillRoot
+    $skillGrand = if ($skillParent) { Split-Path -Parent $skillParent } else { "" }
+    $inSkillsFolder = $skillParent -and $skillGrand -and ((Split-Path -Leaf $skillParent) -eq "skills") -and ((Split-Path -Leaf $skillGrand) -in @(".agents", ".claude"))
+    if (-not $inSkillsFolder) {
+        throw "Invalid ProjectRoot: Skill root ('$canonicalSkillRoot') cannot be located inside project root ('$canonicalProjectRoot') unless it is under <project>/.agents/skills/ or <project>/.claude/skills/."
+    }
 }
 
 $vaultTemplateDir = Join-Path $canonicalSkillRoot "assets/vault-template"
