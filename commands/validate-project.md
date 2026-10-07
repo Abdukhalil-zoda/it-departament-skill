@@ -7,8 +7,8 @@ allowed-tools: Bash, PowerShell, Read, Glob
 Validate the IT Department project setup. Project root: `$ARGUMENTS` if given, otherwise the nearest directory
 upward from the current working directory that contains `.it-department/config.json`.
 
-1. Locate the skill copy used by the project (`<project>/.agents/skills/it-departament-skill`,
-   `<project>/.claude/skills/it-departament-skill`, `~/.claude/skills/it-departament-skill`) and fall back to this
+1. Locate the skill copy used by the project (`<project>/.agents/skills/it-department-skill`,
+   `<project>/.claude/skills/it-department-skill`, `~/.claude/skills/it-department-skill`) and fall back to this
    plugin (`${CLAUDE_PLUGIN_ROOT}`).
 2. Run the validator: Windows `pwsh -NoProfile -File "<skill_root>/scripts/validate-project.ps1" -ProjectRoot "<project>"`,
    otherwise `bash "<skill_root>/scripts/validate-project.sh" "<project>"`. When Python is not available on the

@@ -10,9 +10,9 @@ Update the IT Department skill that this project uses and apply its migration no
 1. **Find the project root:** the nearest directory, searching upward from the current working directory, that
    contains `.it-department/config.json`. If there is none, say that the project is not initialised and stop
    (offer `init-project`).
-2. **Find the skill copy the project uses**, in this order: `<project>/.agents/skills/it-departament-skill`,
-   `<project>/.claude/skills/it-departament-skill`, `~/.claude/skills/it-departament-skill`. If none exists, the
-   project relies on this plugin: run `claude plugin update it-departament-skill@it-departament`, then run
+2. **Find the skill copy the project uses**, in this order: `<project>/.agents/skills/it-department-skill`,
+   `<project>/.claude/skills/it-department-skill`, `~/.claude/skills/it-department-skill`. If none exists, the
+   project relies on this plugin: run `claude plugin update it-department-skill@it-department`, then run
    `${CLAUDE_PLUGIN_ROOT}/scripts/init-project.ps1` (Windows) or `.sh` on the project root and tell the user to
    run `/reload-plugins`; skip to step 4.
 3. **Run the updater of that copy** with the project root. Windows:

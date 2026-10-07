@@ -8,7 +8,7 @@
 # Modes (detected from the skill folder unless --mode is given):
 #   git         the folder is a git checkout            -> git fetch + checkout --ref (default: default branch)
 #   skills-cli  the project's skills-lock.json lists it -> npx skills update <name> -y -p   (Agent Skills CLI)
-#   plugin      the folder is in a Claude plugin cache  -> claude plugin update it-departament-skill@it-departament
+#   plugin      the folder is in a Claude plugin cache  -> claude plugin update it-department-skill@it-department
 #   copy        anything else                           -> git clone --ref of --repo and mirror it over the folder
 # Afterwards: prints the CHANGELOG entries between the old and the new version ("Migration" notes are the manual
 # steps) and, when a project root is given or inferred (<project>/.agents/skills/... or .claude/skills/...),
@@ -17,8 +17,8 @@
 # folder, 3 updated but validate-project failed.
 set -euo pipefail
 
-DEFAULT_REPO="https://github.com/Abdukhalil-zoda/it-departament-skill"
-PLUGIN_ID="it-departament-skill@it-departament"
+DEFAULT_REPO="https://github.com/Abdukhalil-zoda/it-department-skill"
+PLUGIN_ID="it-department-skill@it-department"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SKILL_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 PROJECT_ROOT=""; REF=""; REPO=""; MODE=""; CHECK=0; DRY=0; NO_MIGRATE=0

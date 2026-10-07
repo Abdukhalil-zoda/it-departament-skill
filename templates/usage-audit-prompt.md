@@ -10,7 +10,7 @@ session for a one-off audit. Full process: [`workflows/efficiency-and-usage-audi
 | :--- | :--- |
 | `{PROJECT_NAME}` | `project_name` from `config.json` |
 | `{PROJECT_ROOT}` | absolute project path as seen by the audit session (workstation path, or the sandbox mount such as `$HOME/mnt/<project>`) |
-| `{SKILL_ROOT}` | where the skill package is installed (e.g. `{PROJECT_ROOT}/.agents/skills/it-departament-skill` or `~/.claude/skills/it-departament-skill`) |
+| `{SKILL_ROOT}` | where the skill package is installed (e.g. `{PROJECT_ROOT}/.agents/skills/it-department-skill` or `~/.claude/skills/it-department-skill`) |
 | `{INTEGRATION_BRANCH}` | `git_policy.integration_branch` |
 | `{VAULT_PATH}`, `{LEDGER_PATH}`, `{REPORTS_PATH}` | `paths.vault_relative_path`, `efficiency.ledger_path`, `efficiency.reports_path` |
 | `{AUDIT_INTERVAL_DAYS}` | `efficiency.audit_interval_days` |
@@ -77,7 +77,7 @@ and delete the raw copies afterwards.
 ```
 
 ### Routine settings (cloud scheduler)
-*   **Name:** `{PROJECT_NAME}: usage audit (it-departament)`
+*   **Name:** `{PROJECT_NAME}: usage audit (it-department)`
 *   **Schedule:** `CRON_TZ=<timezone> 51 8 */2 * *` for a 2-day interval (adjust day-of-month step to `audit_interval_days`)
 *   **Model:** `efficiency.audit_model`
 *   **Binding:** the project folder on the workstation (preferred, lets step 1 reach the host) or the git repository

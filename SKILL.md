@@ -1,5 +1,5 @@
 ---
-name: it-departament-skill
+name: it-department-skill
 description: >-
   Orchestrates a software product engineering team across specialized roles (CTO, System Analyst,
   Architect, Developers, QA, and DevOps). Acts as a Deep Reasoner and Strategic Technical Advisor
@@ -14,7 +14,7 @@ description: >-
   guards the vault.
 metadata:
   version: "1.2.0"
-  repository: https://github.com/Abdukhalil-zoda/it-departament-skill
+  repository: https://github.com/Abdukhalil-zoda/it-department-skill
 ---
 
 # IT Department Skill: Coordinated Software Engineering Organization
@@ -65,7 +65,7 @@ skill_root/                           # The installed skill package (reusable, s
 ```
 
 ### Path Resolution Rules
-*   `skill_root`: The installed skill package directory. Never write project tasks, logs, or checkouts here. It may live inside the project only in a standard skills folder (`<project_root>/.agents/skills/it-departament-skill/` or `<project_root>/.claude/skills/it-departament-skill/`); `init-project` and `validate-project` reject any other nesting.
+*   `skill_root`: The installed skill package directory. Never write project tasks, logs, or checkouts here. It may live inside the project only in a standard skills folder (`<project_root>/.agents/skills/it-department-skill/` or `<project_root>/.claude/skills/it-department-skill/`); `init-project` and `validate-project` reject any other nesting.
 *   `project_root`: The target project workspace containing its repositories.
 *   **Never blindly infer `project_root` from `skill_root` or current working directory.** Resolve `project_root` from the user's selected workspace or explicitly ask the user when ambiguous.
 
@@ -96,11 +96,11 @@ The package is versioned (`VERSION`, `CHANGELOG.md`, `metadata.version` in this 
 
 | Channel | Install | Update |
 | :--- | :--- | :--- |
-| **Project copy** (Cowork, Codex, Claude Code; what cloud sessions see) via the Agent Skills CLI | `npx skills add Abdukhalil-zoda/it-departament-skill -y` → `<project_root>/.agents/skills/it-departament-skill/` + `skills-lock.json` | `npx skills update it-departament-skill -y -p` |
-| **Claude Code plugin** (CLI, desktop) with its own marketplace | `/plugin marketplace add Abdukhalil-zoda/it-departament-skill` then `/plugin install it-departament-skill@it-departament` (`--scope project` shares it through `.claude/settings.json`) | `claude plugin update it-departament-skill@it-departament`, or enable auto-update for the marketplace in the `/plugin` panel; `/reload-plugins` loads it |
+| **Project copy** (Cowork, Codex, Claude Code; what cloud sessions see) via the Agent Skills CLI | `npx skills add Abdukhalil-zoda/it-department-skill -y` → `<project_root>/.agents/skills/it-department-skill/` + `skills-lock.json` | `npx skills update it-department-skill -y -p` |
+| **Claude Code plugin** (CLI, desktop) with its own marketplace | `/plugin marketplace add Abdukhalil-zoda/it-department-skill` then `/plugin install it-department-skill@it-department` (`--scope project` shares it through `.claude/settings.json`) | `claude plugin update it-department-skill@it-department`, or enable auto-update for the marketplace in the `/plugin` panel; `/reload-plugins` loads it |
 | **Git checkout or plain copy** anywhere | `git clone` into the skills folder, or copy the package | `scripts/update-skill.ps1` / `.sh` |
 
-`scripts/update-skill.{ps1,sh}` is the one-step updater for every channel: it detects how the copy was installed, updates it, prints the changelog entries between the old and the new version (their **Migration** notes are the manual steps), then re-runs `init-project` and `validate-project` on the project (`-ProjectRoot` / `--project`, inferred for copies under `.agents/skills` or `.claude/skills`); `-Check` / `--check` only reports whether upstream is newer. The plugin ships the slash commands `/it-departament-skill:update-skill`, `/it-departament-skill:validate-project` and `/it-departament-skill:sync-dashboard`, and exposes the eight role files as sub-agents. `validate-project` prints the installed version.
+`scripts/update-skill.{ps1,sh}` is the one-step updater for every channel: it detects how the copy was installed, updates it, prints the changelog entries between the old and the new version (their **Migration** notes are the manual steps), then re-runs `init-project` and `validate-project` on the project (`-ProjectRoot` / `--project`, inferred for copies under `.agents/skills` or `.claude/skills`); `-Check` / `--check` only reports whether upstream is newer. The plugin ships the slash commands `/it-department-skill:update-skill`, `/it-department-skill:validate-project` and `/it-department-skill:sync-dashboard`, and exposes the eight role files as sub-agents. `validate-project` prints the installed version.
 
 ---
 

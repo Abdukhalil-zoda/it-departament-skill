@@ -104,7 +104,7 @@ PYEOF
 ALLOWED='Read Write Edit MultiEdit Glob Grep Bash(python *) Bash(python3 *) Bash(git add *) Bash(git commit *) Bash(git status *) Bash(git log *) Bash(git diff *) Bash(git rev-parse *) Bash(git branch *) Bash(ls *) Bash(cat *)'
 CMD_DISPLAY="$CLAUDE -p --model $MODEL --permission-mode acceptEdits --allowedTools \"$ALLOWED\" --add-dir \"$SKILL_ROOT\" --output-format text < \"$PROMPT_PATH\""
 HOUR="${AT%%:*}"; MINUTE="${AT##*:}"
-CRON_LINE="$((10#$MINUTE)) $((10#$HOUR)) */$INTERVAL * * cd \"$PROJECT_ROOT\" && \"$SCRIPT_DIR/schedule-usage-audit.sh\" \"$PROJECT_ROOT\" --skill-root \"$SKILL_ROOT\" --run-now >> \"$RUNS_DIR/cron.log\" 2>&1 # it-departament-usage-audit:$PROJECT_ROOT"
+CRON_LINE="$((10#$MINUTE)) $((10#$HOUR)) */$INTERVAL * * cd \"$PROJECT_ROOT\" && \"$SCRIPT_DIR/schedule-usage-audit.sh\" \"$PROJECT_ROOT\" --skill-root \"$SKILL_ROOT\" --run-now >> \"$RUNS_DIR/cron.log\" 2>&1 # it-department-usage-audit:$PROJECT_ROOT"
 
 echo "==> IT Department usage audit (headless)"
 echo "    Project:   $PROJECT_ROOT ($PROJECT_NAME)"
@@ -125,7 +125,7 @@ case "$MODE" in
         ;;
     register)
         command -v crontab >/dev/null 2>&1 || { echo "Error: crontab not available on this system." >&2; exit 1; }
-        MARK="# it-departament-usage-audit:$PROJECT_ROOT"
+        MARK="# it-department-usage-audit:$PROJECT_ROOT"
         EXISTING="$(crontab -l 2>/dev/null || true)"
         { echo "$EXISTING" | grep -vF "$MARK" || true; echo "$CRON_LINE"; } | sed '/^$/d' | crontab -
         echo "==> crontab entry installed (every $INTERVAL day(s) at $AT). Keep efficiency.audit_interval_days in config.json equal to $INTERVAL."

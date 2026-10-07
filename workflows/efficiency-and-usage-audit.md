@@ -166,7 +166,7 @@ repository. Settings that worked in production:
 
 | Setting | Value |
 | :--- | :--- |
-| Name | `<project>: usage audit (it-departament)` |
+| Name | `<project>: usage audit (it-department)` |
 | Cron | `CRON_TZ=<your timezone> 51 8 */2 * *` — every second day at 08:51 local time (`*/2` on day-of-month fires on odd days; month boundaries may give a 1- or 3-day gap, acceptable) |
 | Model | `efficiency.audit_model` (strongest available) |
 | Prompt | `templates/usage-audit-prompt.md` with the placeholders filled in |

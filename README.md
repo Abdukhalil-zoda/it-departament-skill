@@ -66,9 +66,9 @@ bumps it). Pick the channel that matches how you work; all three come from this 
 
 | Channel | Install | Update |
 | :--- | :--- | :--- |
-| **Project copy** via the [Agent Skills CLI](https://github.com/vercel-labs/skills): what Cowork, Codex and cloud sessions see | `npx skills add Abdukhalil-zoda/it-departament-skill -y` → `<project_root>/.agents/skills/it-departament-skill/` and `skills-lock.json` | `npx skills update it-departament-skill -y -p` |
-| **Claude Code plugin** (CLI and desktop) | `/plugin marketplace add Abdukhalil-zoda/it-departament-skill`, then `/plugin install it-departament-skill@it-departament` (`--scope project` shares it with the team through `.claude/settings.json`) | `claude plugin update it-departament-skill@it-departament`, or turn on auto-update for the `it-departament` marketplace in the `/plugin` panel; `/reload-plugins` loads the new version |
-| **Git checkout or plain copy** anywhere | `git clone https://github.com/Abdukhalil-zoda/it-departament-skill` into your skills folder, or copy the package | `scripts/update-skill.ps1` / `.sh` |
+| **Project copy** via the [Agent Skills CLI](https://github.com/vercel-labs/skills): what Cowork, Codex and cloud sessions see | `npx skills add Abdukhalil-zoda/it-department-skill -y` → `<project_root>/.agents/skills/it-department-skill/` and `skills-lock.json` | `npx skills update it-department-skill -y -p` |
+| **Claude Code plugin** (CLI and desktop) | `/plugin marketplace add Abdukhalil-zoda/it-department-skill`, then `/plugin install it-department-skill@it-department` (`--scope project` shares it with the team through `.claude/settings.json`) | `claude plugin update it-department-skill@it-department`, or turn on auto-update for the `it-department` marketplace in the `/plugin` panel; `/reload-plugins` loads the new version |
+| **Git checkout or plain copy** anywhere | `git clone https://github.com/Abdukhalil-zoda/it-department-skill` into your skills folder, or copy the package | `scripts/update-skill.ps1` / `.sh` |
 
 One updater covers every channel and also migrates the project:
 
@@ -85,13 +85,13 @@ It detects how the copy was installed (git checkout, Agent Skills CLI copy, plug
 it, prints the `CHANGELOG.md` entries between the old and the new version, whose **Migration** notes are the
 manual steps (new config keys, a profile decision, lint findings), then re-runs `init-project` (adds new
 folders and files, never overwrites) and `validate-project`. In Claude Code the plugin adds
-`/it-departament-skill:update-skill`, `/it-departament-skill:validate-project` and `/it-departament-skill:sync-dashboard`,
+`/it-department-skill:update-skill`, `/it-department-skill:validate-project` and `/it-department-skill:sync-dashboard`,
 and exposes the eight role files as sub-agents.
 
 ## Quick start
 
 1.  **Install the package** with one of the channels above, for example
-    `<project_root>/.agents/skills/it-departament-skill/` (project-scoped, Codex / Claude Code / Cowork) or
+    `<project_root>/.agents/skills/it-department-skill/` (project-scoped, Codex / Claude Code / Cowork) or
     the Claude Code plugin. Keep it outside the project's source tree you want the agents to modify.
 2.  **Initialise the project** (idempotent, never overwrites existing notes or config):
     ```powershell

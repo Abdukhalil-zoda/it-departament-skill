@@ -1,13 +1,13 @@
 {
-  "name": "it-departament-skill",
+  "name": "it-department-skill",
   "version": "1.2.0",
   "description": "IT Department: a coordinated software engineering organization (CTO, system analyst, architect, developers, QA, DevOps, content reviewer) with operating profiles, a vault-backed delivery pipeline, a token optimizer and a content & localization reviewer.",
   "author": {
     "name": "Abdulaziz Abdukhalil-zoda",
     "url": "https://github.com/Abdukhalil-zoda"
   },
-  "homepage": "https://github.com/Abdukhalil-zoda/it-departament-skill",
-  "repository": "https://github.com/Abdukhalil-zoda/it-departament-skill",
+  "homepage": "https://github.com/Abdukhalil-zoda/it-department-skill",
+  "repository": "https://github.com/Abdukhalil-zoda/it-department-skill",
   "keywords": [
     "engineering-team",
     "orchestration",

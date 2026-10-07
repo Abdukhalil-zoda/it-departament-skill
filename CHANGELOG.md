@@ -14,8 +14,8 @@ has to do by hand.
 - Claude Code plugin manifest (`.claude-plugin/plugin.json`) and a marketplace in the same repository
   (`.claude-plugin/marketplace.json`), so the skill installs and updates with `/plugin` commands and can
   auto-update per marketplace setting.
-- Slash commands shipped with the plugin: `/it-departament-skill:update-skill`,
-  `/it-departament-skill:validate-project`, `/it-departament-skill:sync-dashboard`.
+- Slash commands shipped with the plugin: `/it-department-skill:update-skill`,
+  `/it-department-skill:validate-project`, `/it-department-skill:sync-dashboard`.
 - Role files carry agent frontmatter (`name`, `description`), so the plugin exposes the eight roles as
   sub-agents; the files stay readable as role prompts for other hosts.
 - `scripts/update-skill.ps1` / `.sh`: detects how the skill is installed (git checkout, Agent Skills CLI copy
@@ -30,8 +30,8 @@ has to do by hand.
 
 ### Migration
 - Projects: none. Optional: `scripts/update-skill.ps1 -Check` (or `.sh --check`) tells whether upstream is newer.
-- Claude Code users: `/plugin marketplace add Abdukhalil-zoda/it-departament-skill`, then
-  `/plugin install it-departament-skill@it-departament` (README "Installing and updating").
+- Claude Code users: `/plugin marketplace add Abdukhalil-zoda/it-department-skill`, then
+  `/plugin install it-department-skill@it-department` (README "Installing and updating").
 
 ## [1.1.0] - 2026-10-07
 
