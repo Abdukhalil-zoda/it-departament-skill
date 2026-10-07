@@ -23,6 +23,8 @@ Configuration: the `content_review` block of `<project_root>/.it-department/conf
 
 **Trigger:** the System Analyst finishes a specification with `content_review: required` in its frontmatter (any task that adds or changes user-facing text, localized resources or shipped content), before the task can enter `Ready-For-Dev`. Lightweight-route tasks get the same pass in short form.
 
+**Depth by operating profile** ([`workflows/operating-profiles.md`](../workflows/operating-profiles.md)): short form in `prototype`; the full steps below in `pilot` (short form allowed for lightweight tasks) and `production`.
+
 **Steps:**
 1.  Read §1 Context, §6 *User-Facing Content & Localization* (the strings table), §7 Acceptance Criteria of the task note; open the glossary and style guide.
 2.  Check the strings table: every string has a key or location, a context (screen, when it appears), a value for **every configured locale**, placeholders with the same meaning in all locales, a length limit where the UI constrains it, and plural/gender variants where the language needs them.
@@ -39,6 +41,8 @@ Configuration: the `content_review` block of `<project_root>/.it-department/conf
 ## 4. Checkpoint B — Pre-Release (release candidate review)
 
 **Trigger:** the coordinator freezes the release candidate SHA ([`workflows/review-qa-and-release.md`](../workflows/review-qa-and-release.md), Step 1). You review the candidate **in parallel with QA on the same SHA**; your sign-off is part of the CTO release gate.
+
+**Depth by operating profile:** `prototype` — only the strings changed since the baseline (inventory section 3); `pilot` — the steps below, short form allowed for lightweight tasks; `production` — the steps below in full.
 
 **Steps:**
 1.  Run the inventory on the candidate:

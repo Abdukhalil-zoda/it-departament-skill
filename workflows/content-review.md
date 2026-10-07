@@ -34,6 +34,14 @@ The System Analyst sets `content_review` and fills §6 of the task template; the
 `Ready-For-Dev` transition while `content_review_intake` is `pending` or `changes-requested` for a required task.
 Lightweight-route tasks are not exempt: a copy change is precisely a content change, reviewed in short form.
 
+**Depth by operating profile** ([`operating-profiles.md`](./operating-profiles.md)):
+*   `prototype` — Checkpoint A in short form; Checkpoint B only on the strings changed since the baseline.
+*   `pilot` — both checkpoints; short form allowed for lightweight tasks.
+*   `production` — both checkpoints as specified below.
+
+*Short form* means the same checks on the strings in scope (every locale, placeholders, glossary), recorded as a
+verdict and a findings list instead of the full report template.
+
 ---
 
 ## 2. Checkpoint A — intake review of the task
@@ -68,8 +76,9 @@ QA evidence (new candidate SHA → new review, limited to what changed).
 4.  **Report** — `<vault>/05-Reports/content-review-<date>-<sha7>.md` from
     [`templates/content-review-report.md`](../templates/content-review-report.md): locales and confidence,
     counts by severity, findings, deferrals requested, verdict (`approved`, `approved-with-deferrals`, `blocked`).
-5.  **Record & send** — dashboard row (via the coordinator), evidence attached to the candidate SHA, and a
-    ≤ 15-line message to the CTO with the verdict and the deferrals to sign.
+5.  **Record & send** — evidence attached to the candidate SHA and a ≤ 15-line message to the CTO with the verdict
+    and the deferrals to sign. The dashboard row is generated from the report's frontmatter (`checkpoint`, `scope`,
+    `locales_reviewed`, `findings`, `verdict`, `date`) by `scripts/dashboard_sync.py`, which the coordinator runs.
 
 The CTO release gate requires the content verdict next to the QA verdict: `blocked` stops the release like a
 `Critical`/`Major` functional defect; `approved-with-deferrals` needs the CTO's explicit sign-off on each

@@ -70,6 +70,7 @@ Project permissions are defined explicitly in `<project_root>/.it-department/con
 4.  **Distinguish Spec Approval from Release Approval:**
     *   Approving a task spec (`Definition of Ready`) approves *what to build*.
     *   Approving a production release approves *the exact built, tested, immutable commit SHA*.
+5.  **A Profile Never Widens Authority:** The operating profile ([`operating-profiles.md`](./operating-profiles.md)) changes the depth of gates, not who may act. A profile never widens `delegated_authorities`; in `prototype`/`pilot` a direct production deploy still requires `allow_deploy_production: true` or the user's go-ahead in `USER` mode (otherwise rule 2 applies). Restoring a backup in production is a destructive operation (`allow_destructive_operations`).
 
 ---
 
@@ -78,3 +79,4 @@ Project permissions are defined explicitly in `<project_root>/.it-department/con
 *   Or instruct the coordinator in natural language:
     *   *"Switch CTO mode to USER."*
     *   *"Grant delegation to deploy to production for sprint 12."*
+    *   *"Payments go live next week: move the project to the production profile."* (a CTO decision, logged in the decisions journal; see [`operating-profiles.md`](./operating-profiles.md) §5)

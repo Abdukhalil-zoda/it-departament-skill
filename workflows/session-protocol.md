@@ -76,6 +76,9 @@ dashboard (without `--check`).
     daemon. Write it, then read it back: if the `session_id` is not yours, another session won the race and
     you work in contributor mode.
 3.  **TTL.** Default 4 hours. Renew by rewriting `expires_at` before it passes, for example after every task wave.
+    Re-read the lock before each batch of shared writes (applying transitions, moving notes, syncing the
+    dashboard): if it is no longer yours, you have lost it; switch to contributor mode, and if you wrote shared
+    records after it expired, append a `CONFLICT` line (section 6).
 4.  **Expired lock.** It may be taken over after appending one line to the hand-off note:
     `- 2026-10-07T13:20:00Z TAKEOVER coordinator@cowork (session s-41, expired 13:00Z) by coordinator@cli (session s-42)`
 5.  **Never committed.** The lock is git-ignored (`.it-department/.gitignore`, written by `init-project`) and

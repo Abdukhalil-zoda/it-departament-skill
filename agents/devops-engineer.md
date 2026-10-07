@@ -25,6 +25,8 @@ When a build, test, or deployment failure occurs:
 *   **Mock Credentials:** Provide safe dummy templates (e.g. `.env.test.example`) with mock strings for unit testing.
 
 ### Step 4: Production Deployment & Archival
+*   **Depth by operating profile** ([`workflows/operating-profiles.md`](../workflows/operating-profiles.md)): `production` follows the steps below with the immutable candidate SHA and the CTO gate; `pilot` deploys after the QA smoke and the content verdict, `prototype` directly from the integration branch after a smoke. Authorization is the same in every profile (`allow_deploy_production` or the user's go-ahead).
+*   **Backup first** (`pilot` / `prototype` on every deploy; every profile before a migration or destructive operation): take a named, restorable backup (DB dump, volume snapshot or export), check that it exists and has a plausible size, and record its name and restore command in the session note before step 2.
 *   Upon explicit authorization from the CTO (or User in CTO mode):
     1. Verify the release candidate commit SHA on `$INT_BRANCH`.
     2. Deploy the verified artifact corresponding to the candidate SHA.
@@ -35,7 +37,7 @@ When a build, test, or deployment failure occurs:
        git -C "<repository_root>" tag -a "vX.Y.Z" -m "Release vX.Y.Z (SHA: $RELEASE_CANDIDATE_SHA)"
        ```
     4. Monitor post-deployment health metrics for 15 minutes.
-    5. **If deploy fails:** Execute non-destructive operational rollback: immediately redeploy the previous healthy artifact. Do **not** hard-reset or force-push Git branches. Open a revert pull request to synchronize code.
+    5. **If deploy fails:** Execute non-destructive operational rollback: immediately redeploy the previous healthy artifact. Do **not** hard-reset or force-push Git branches. Open a revert pull request to synchronize code. In `pilot` / `prototype`, when the change damaged data, also restore the recorded backup: a restore overwrites everything written after the backup and is a destructive operation (`allow_destructive_operations` or the user's go-ahead).
     6. **If deploy succeeds:**
        * Submit transition request to Coordinator with deployment evidence.
        * The Coordinator moves completed tasks to `<vault>/04-Archive/Completed-Tasks/` and resolved bugs to `<vault>/04-Archive/Resolved-Bugs/`.

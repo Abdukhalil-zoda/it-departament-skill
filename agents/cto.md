@@ -42,6 +42,10 @@ Configuration is resolved from `<project_root>/.it-department/config.json`.
     *   Require the pre-release content review verdict for the same candidate SHA (`approved` or `approved-with-deferrals`, report in `<vault>/05-Reports/`); a `blocked` verdict stops the release like a functional blocker ([`content-reviewer.md`](./content-reviewer.md)).
     *   Review and sign off on any non-blocking `Minor` defect deferrals, including content deferrals listed in the content review report; decide disputed wording and glossary terms (the CTO owns product wording).
 5.  **Secrets & Security Enforcement:** Ensure production credentials remain 100% human-managed. Reject any commit or PR that exposes real credentials in code or repos.
+6.  **Operating Profile Owner** ([`workflows/operating-profiles.md`](../workflows/operating-profiles.md)):
+    *   You own `operating_profile` (`prototype` / `pilot` / `production`; absent = `production`). The coordinator proposes it at project init and whenever a `profile_review` fact changes (payments go live, an SLA is promised, regulated data arrives, users pass your pilot threshold, default 50 active); you confirm once or decide otherwise. It never switches silently.
+    *   Every switch is a `D-NNN` row in the decisions journal (`<vault>/03-ADR/decisions-log.md`). At each release gate the criteria are re-checked: upgrade when a criterion of the next profile is met; downgrade only by your explicit decision (in `cto_mode: "VIRTUAL"` with the user's go-ahead).
+    *   A profile never widens `delegated_authorities`, and the floors hold in every profile: secrets out of git, a verified backup before destructive operations, migrations and prod experiments, no force-push, archive instead of delete, the Stubborn Donkey gate, the usage export.
 
 ---
 

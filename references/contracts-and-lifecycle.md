@@ -33,11 +33,11 @@ flowchart TD
     RFR --> ARC["Archived<br/>(Post-Deploy)"]
 ```
 
-| Canonical Status | Directory Location | State Transition Trigger | Required Verification Evidence |
+| Canonical Status | Directory Location | State Transition Trigger | Required Verification Evidence (depth per operating profile, [`workflows/operating-profiles.md`](../workflows/operating-profiles.md)) |
 | :--- | :--- | :--- | :--- |
 | **`Backlog`** | `<vault>/01-Tasks/Backlog/` | Product Owner / CTO | Business requirement summary, Feasibility score ($\ge 8/10$ or resolved via ADR-OVERRIDE), priority score. |
 | **`In-Analysis`** | `<vault>/01-Tasks/In-Analysis/` | System Analyst / Architect | Initial state for Full-route tasks; repo inspection started; data models drafted. |
-| **`Ready-For-Dev`** | `<vault>/01-Tasks/Ready-For-Dev/` | System Analyst / Tech Lead | Passes **Definition of Ready (DoR)** checklist. If advisory pushback occurred, resolved alternative or ADR-OVERRIDE confirmed. Tasks with `content_review: required` carry `content_review_intake: approved` (content review Checkpoint A). Initial state for Lightweight route. |
+| **`Ready-For-Dev`** | `<vault>/01-Tasks/Ready-For-Dev/` | System Analyst / Tech Lead | Passes **Definition of Ready (DoR)** checklist ([`definition-of-ready-done.md`](./definition-of-ready-done.md)). If advisory pushback occurred, resolved alternative or ADR-OVERRIDE confirmed. Tasks with `content_review: required` carry `content_review_intake: approved` (content review Checkpoint A). Initial state for Lightweight route. |
 | **`In-Development`** | `<vault>/01-Tasks/In-Development/` | Assigned Developer | Isolated worktree created; branch checked out; `assigned_agent` set. |
 | **`Code-Review`** | `<vault>/01-Tasks/Code-Review/` | Assigned Developer | Pre-deploy CI passed (lint, typecheck, unit tests); PR opened; diff ready. |
 | **`QA-Testing`** | `<vault>/01-Tasks/QA-Testing/` | Reviewer / Coordinator | Peer review signed off; merged into integration branch; deployed to test env. |
@@ -92,6 +92,9 @@ All path resolution is relative to `<project_root>`:
 6.  **Machine-Time Feed (optional):** `<project_root>/${efficiency.jobs_log_path}` (default `.it-department/jobs`): job logs or `jobs.jsonl`.
 7.  **Usage Audit Reports:** `<project_root>/${efficiency.reports_path}` (default `vault/05-Reports`): `usage-audit-<date>.md` + `.json` sidecar.
 8.  **Content Reference & Reviews:** `<project_root>/${content_review.glossary_path}` and `${content_review.style_guide_path}` (default `vault/06-Content/`); content inventories and review reports under `${content_review.reports_path}` (default `vault/05-Reports`).
+9.  **Lock & Hand-off:** `<project_root>/.it-department/lock.json` (session lock: written by hand, git-ignored, never committed) and `<project_root>/.it-department/sessions/_handoff/` (`latest.md`, versioned, plus dated copies `<YYYY-MM-DD>-<session_id>.md`, git-ignored). Fixed locations; rules in [`workflows/session-protocol.md`](../workflows/session-protocol.md).
+10. **Decisions Journal:** `<project_root>/${paths.vault_relative_path}/03-ADR/decisions-log.md`: one `D-NNN` row per CTO decision (format `templates/decision-record.md`); decisions that need an ADR stay ADR notes in `03-ADR/`.
+11. **QA Reports:** task level `qa-report.md` in the QA session directory; release level `<vault>/05-Reports/qa-report-<date>-<sha7>.md` (template `templates/qa-report.md`).
 
 ### Multi-Repo & Worktree Isolation Formula
 To support both single-repository workspaces and multi-repository mono-workspaces without naming collisions:
@@ -118,7 +121,8 @@ To eliminate race conditions, file corruption, and duplicate task claims:
 
 1.  **Single Writer Rule:**
     *   The **Coordinator** is the exclusive writer of shared task notes, note moves between folders, and `<vault>/00-Dashboard.md`.
-    *   Implementation agents (developers, QA, content reviewer, analyst, architect, devops) do **not** directly move notes or overwrite the dashboard. QA and the content reviewer may create new bug notes; the content reviewer also owns the files under `06-Content/` and its reports under `05-Reports/`.
+    *   With several concurrent sessions the writer is the coordinator session that holds `.it-department/lock.json`; every other session works in contributor mode ([`workflows/session-protocol.md`](../workflows/session-protocol.md)).
+    *   Implementation agents (developers, QA, content reviewer, analyst, architect, devops) do **not** directly move notes or overwrite the dashboard. QA and the content reviewer may create new bug notes; roles write their own reports under `05-Reports/` (QA reports, content reviews, usage audits); the content reviewer also owns the files under `06-Content/`.
 2.  **Evidence-Based Transition Requests:**
     *   When an agent completes work, it exports its session usage to the ledger (`scripts/usage_ledger.py`, efficiency guide) and writes its deliverables, test logs (tailed per R4), diff summary, and transition request into its session directory:  
         `<project_root>/.it-department/sessions/<task-id>/<agent-role>/<session-id>/transition-request.json`
@@ -132,16 +136,19 @@ To eliminate race conditions, file corruption, and duplicate task claims:
           "timestamp": "2026-09-10T17:00:00Z"
         }
         ```
+    *   Optional fields: `qa_status` and `candidate_sha` (`→ Ready-For-Release` needs `qa_status: passed` or a `candidate_sha`), `release_version` and `release_commit` (required for `→ Archived`).
 3.  **Coordinator State Application:**
-    *   The coordinator inspects the evidence, checks that `current_status == from_status` (rejecting stale or out-of-order requests), updates the note's frontmatter, moves the note file, and regenerates `00-Dashboard.md`.
+    *   The coordinator inspects the evidence; transition requests are applied with `scripts/apply_transitions.py`, which checks that `current_status == from_status` and that `to_status` is a legal next status (§1.1, §1.2), rejects stale or out-of-order requests with a reason, updates the note's frontmatter, moves the note file, appends a line to the note's `## Transition Log` and records `applied_at` in the request. It then regenerates `00-Dashboard.md` with `scripts/dashboard_sync.py` (unless `--no-sync`).
 4.  **Task Claiming & Duplicate Prevention:**
     *   Before dispatching a task to an agent, the coordinator marks `assigned_agent: <role>` and records the active worktree path in the task frontmatter. Duplicate assignments are immediately rejected.
 5.  **Interrupted Dashboard Recovery:**
-    *   If a session is interrupted, `00-Dashboard.md` can be reconstructed deterministically at any time by re-scanning the note states across `<vault>/01-Tasks/`, `<vault>/02-Bugs/`, and `<vault>/04-Archive/`.
+    *   If a session is interrupted, `00-Dashboard.md` can be reconstructed deterministically at any time by re-scanning the note states across `<vault>/01-Tasks/`, `<vault>/02-Bugs/`, and `<vault>/04-Archive/`: `python3 <skill_root>/scripts/dashboard_sync.py --root <project_root>` (`--check` reports drift without writing).
 
 ---
 
 ## 5. Immutable Release Candidate & Non-Destructive Rollback
+
+*Operating profiles:* the frozen candidate gate below is the `production` profile; `prototype` and `pilot` deploy from the integration branch with a DB backup first ([`workflows/operating-profiles.md`](../workflows/operating-profiles.md) §2). The non-destructive rollback contract holds in every profile.
 
 ### Release Candidate Freezing & Invalidation
 *   Verification, QA sign-off, and CTO approval apply strictly to an **immutable commit SHA** representing the complete diff against production (`git diff <production-branch>...<candidate-sha>`).
