@@ -55,7 +55,7 @@ Configuration: the `content_review` block of `<project_root>/.it-department/conf
     *   `approved` — no open findings above the deferrable level;
     *   `approved-with-deferrals` — only `Minor`/`Trivial` left and the CTO signed the deferrals;
     *   `blocked` — at least one `Critical`/`Major` content defect open (`content_review.block_release_on`).
-7.  Add a row to the "Content & Localization Reviews" table of `<vault>/00-Dashboard.md` through the coordinator (single-writer rule) and attach the verdict to the candidate SHA as release evidence.
+7.  Attach the verdict to the candidate SHA as release evidence. The "Content & Localization Reviews" row of `<vault>/00-Dashboard.md` is generated from the report's frontmatter by `scripts/dashboard_sync.py`, which the coordinator runs (single-writer rule): never edit the dashboard yourself.
 8.  **Send the CTO a report of at most 15 lines:** candidate SHA, locales reviewed and your confidence per locale, counts by severity, the top findings in one line each, the verdict, and the question which deferrals to sign. In `cto_mode: "VIRTUAL"` the Virtual CTO receives it and reports the user-visible risk to the Business Owner.
 
 ---

@@ -119,7 +119,8 @@ The auditor is a separate session of the strongest model (`efficiency.audit_mode
     the ledger on them, delete the raw copies. If the host is unreachable, work with the committed ledger
     and say so in the report.
 2.  **Generate the numbers.** `python3 <skill_root>/scripts/usage_report.py --root <project_root>` writes
-    `{reports_path}/usage-audit-<date>.md` (+ a `.json` sidecar with the totals). `--since` defaults to the
+    `{reports_path}/usage-audit-<date>.md` (+ a `.json` sidecar with the totals; never pass `--no-json` for a real
+    audit — the dashboard's token block and the next delta read the sidecar). `--since` defaults to the
     date of the previous report; sections 1–5 are deterministic: tokens by session / role / model / content
     group, largest tool results, machine time by role / kind / task, queue waits and dev/QA overlaps,
     screenshots per folder, **rule indicators R1–R5 against the configured limits**, and the delta against

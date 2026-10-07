@@ -54,12 +54,7 @@
     "test_secrets_agent_managed": true,
     "commit_real_credentials": false
   },
-  "documents": [
-    {
-      "title": "Product specification",
-      "path": "docs/requirements/spec.md"
-    }
-  ],
+  "documents": [],
   "efficiency": {
     "audit_interval_days": 2,
     "audit_model": "claude-fable-5-1",

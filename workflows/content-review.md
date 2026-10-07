@@ -166,7 +166,7 @@ review report and in the bug note (`release_blocking: false`, deferral reason).
 | System Analyst | spec with §6 strings table, `content_review` flag | intake verdict, final wording, glossary proposals |
 | Developers | strings copied verbatim from the table into every locale, inventory run before hand-off | content bug notes with proposed text |
 | QA Engineer | screenshots of the candidate; content defects it notices logged with `category: content` | confirmation or re-classification of those defects |
-| Coordinator | candidate SHA, baseline SHA, dispatch at both checkpoints | verdicts, dashboard row text, evidence files |
+| Coordinator | candidate SHA, baseline SHA, dispatch at both checkpoints | verdicts and evidence files (dashboard rows are generated from the report frontmatter by `scripts/dashboard_sync.py`) |
 | CTO | decisions on deferrals, glossary terms, disputed wording | the ≤ 15-line pre-release report, the review file |
 
 Single-writer rule: the reviewer writes only its own session directory, new bug notes, the review and

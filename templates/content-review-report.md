@@ -45,7 +45,7 @@ Items marked `needs native check`: {locale: keys…}.
 
 ## 5. Verdict
 **{approved | approved-with-deferrals | blocked | changes-requested}** — {one sentence: what blocks, or what was signed}.
-{Pre-release: evidence attached to candidate `{sha7}`; dashboard row requested from the coordinator.}
+{Pre-release: evidence attached to candidate `{sha7}`; the dashboard row is generated from this frontmatter by `scripts/dashboard_sync.py`.}
 
 ---
 
